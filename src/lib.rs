@@ -1,25 +1,60 @@
-#![no_std]
-
 use asr::{future::next_tick, Process};
-
 asr::async_main!(stable);
-asr::panic_handler!();
+
+const EXE: &str = "Spyro-Win64-Shipping.exe";
 
 async fn main() {
-    // TODO: Set up some general state and settings.
-
-    asr::print_message("Hello, World!");
-
     loop {
-        let process = Process::wait_attach("Spyro.exe").await;
-        process
-            .until_closes(async {
-                // TODO: Load some initial information from the process.
+        let process = Process::wait_attach(EXE).await;
+        process.until_closes(async {
+            if let Ok(address) = process.get_module_address(EXE) {
+                let mut is_loading: bool;
+                let mut in_menu: bool;
+                let mut in_game: bool;
+
                 loop {
-                    // TODO: Do something on every tick.
+                    // is_loading
+                    if let Ok(is_not_loading_value) = process.read_pointer_path::<u8>(
+                        address,
+                        asr::PointerSize::Bit64,
+                        &[0x03415F30, 0xF8, 0x4A8, 0xE19]
+                    ) {
+                        is_loading = is_not_loading_value == 0;
+                        asr::timer::set_variable(
+                            "is_loading",
+                            &is_loading.to_string()
+                        );
+                    }
+
+                    // in_menu
+                    if let Ok(in_menu_value) = process.read_pointer_path::<u8>(
+                        address,
+                        asr::PointerSize::Bit64,
+                        &[0x034160D0, 0x20, 0x218, 0x60]
+                    ) {
+                        in_menu = in_menu_value > 0;
+                        asr::timer::set_variable(
+                            "in_menu",
+                            &in_menu.to_string()
+                        );
+                    }
+
+                    // in_game
+                    if let Ok(in_game_value) = process.read_pointer_path::<u8>(
+                        address,
+                        asr::PointerSize::Bit64,
+                        &[0x03415F30, 0xF0, 0x378, 0x564]
+                    ) {
+                        in_game = in_game_value > 0;
+                        asr::timer::set_variable(
+                            "in_game",
+                            &in_game.to_string()
+                        );
+                    }
+
                     next_tick().await;
                 }
-            })
-            .await;
+            }
+        }).await;
     }
 }
