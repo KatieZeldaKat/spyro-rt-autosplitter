@@ -8,6 +8,8 @@ async fn main() {
         let process = Process::wait_attach(EXE).await;
         process.until_closes(async {
             if let Ok(address) = process.get_module_address(EXE) {
+                detect_game_version(&process);
+
                 let mut is_loading: bool;
                 let mut in_menu: bool;
                 let mut in_game: bool;
@@ -56,5 +58,15 @@ async fn main() {
                 }
             }
         }).await;
+    }
+}
+
+fn detect_game_version(process: &Process) {
+    if process.get_module_size(EXE).unwrap() == 61046784 {
+        asr::print_message("Spyro Reignited Trilogy ASL started (game version detected: Release)");
+    }
+    else {
+        asr::print_message("Spyro Reignited Trilogy ASL started (unknown game version)");
+        asr::print_message(&process.get_module_size(EXE).unwrap().to_string());
     }
 }
