@@ -28,6 +28,14 @@ async fn main() {
                         &mut in_game,
                     );
 
+                    // start
+                    if timer::state() != timer::TimerState::Running &&
+                        in_game.pair.unwrap_or_default().changed_from_to(
+                            &false, &true
+                    ) {
+                        timer::start();
+                    }
+
                     next_tick().await;
                 }
             }
