@@ -20,13 +20,9 @@ async fn main() {
 
                 // update
                 loop {
-                    update_watchers(
-                        &process,
-                        &address,
-                        &mut is_loading,
-                        &mut in_menu,
-                        &mut in_game,
-                    );
+                    is_loading.update_infallible(get_is_loading(&process, &address));
+                    in_menu.update_infallible(get_in_menu(&process, &address));
+                    in_game.update_infallible(get_in_game(&process, &address));
 
                     // start
                     if timer::state() != timer::TimerState::Running &&
@@ -53,51 +49,62 @@ fn detect_game_version(process: &Process) {
     }
 }
 
-fn update_watchers(
-    process: &Process,
-    address: &Address,
-    is_loading: &mut Watcher<bool>,
-    in_menu: &mut Watcher<bool>,
-    in_game: &mut Watcher<bool>,
-) {// is_loading
+fn get_is_loading(process: &Process, address: &Address) -> bool {
     if let Ok(is_not_loading_raw) = process.read_pointer_path::<u8>(
         *address,
         PointerSize::Bit64,
         &[0x03415F30, 0xF8, 0x4A8, 0xE19]
     ) {
+        // Set to 0 when loading, set to 1 otherwise
         let is_loading_value = is_not_loading_raw == 0;
-        is_loading.update_infallible(is_loading_value);
+
         timer::set_variable(
             "is_loading",
             &is_loading_value.to_string()
         );
+
+        return is_loading_value;
     }
 
-    // in_menu
+    return true;
+}
+
+fn get_in_menu(process: &Process, address: &Address) -> bool {
     if let Ok(in_menu_raw) = process.read_pointer_path::<u8>(
         *address,
         PointerSize::Bit64,
         &[0x034160D0, 0x20, 0x218, 0x60]
     ) {
+        // Set to 0 in game, 1 if in menu, 15 if in graphics submenu
         let in_menu_value = in_menu_raw > 0;
-        in_menu.update_infallible(in_menu_value);
+
         timer::set_variable(
             "in_menu",
             &in_menu_value.to_string()
         );
+
+        return in_menu_value;
     }
 
-    // in_game
+    return true;
+}
+
+fn get_in_game(process: &Process, address: &Address) -> bool {
     if let Ok(in_game_raw) = process.read_pointer_path::<u8>(
         *address,
         PointerSize::Bit64,
         &[0x03415F30, 0xF0, 0x378, 0x564]
     ) {
+        // Set to 0 in title screen and main menu, set to 1 everywhere else
         let in_game_value = in_game_raw > 0;
-        in_game.update_infallible(in_game_value);
+
         timer::set_variable(
             "in_game",
             &in_game_value.to_string()
         );
+
+        return in_game_value;
     }
+
+    return false;
 }
