@@ -1,11 +1,12 @@
-use asr::{future::next_tick, print_message, timer, Address, PointerSize, Process, watcher::Watcher};
+use asr::{future::next_tick, print_message, timer, watcher::Watcher, Address, PointerSize, Process};
 asr::async_main!(stable);
 
 const EXE: &str = "Spyro-Win64-Shipping.exe";
+const TICK_RATE: i32 = 30;
 
 async fn main() {
     // startup
-    asr::set_tick_rate(30.0);
+    asr::set_tick_rate(f64::from(TICK_RATE));
 
     loop {
         let process = Process::wait_attach(EXE).await;
@@ -14,25 +15,67 @@ async fn main() {
                 // init
                 detect_game_version(&process);
 
+                // state
                 let mut is_loading: Watcher<bool> = Watcher::new();
                 let mut in_menu: Watcher<bool> = Watcher::new();
                 let mut in_game: Watcher<bool> = Watcher::new();
 
-                // update
                 loop {
-                    is_loading.update_infallible(get_is_loading(&process, &address));
-                    in_menu.update_infallible(get_in_menu(&process, &address));
-                    in_game.update_infallible(get_in_game(&process, &address));
-
                     // start
-                    if timer::state() != timer::TimerState::Running &&
-                        in_game.pair.unwrap_or_default().changed_from_to(
-                            &false, &true
-                    ) {
-                        timer::start();
+                    loop {
+                        in_game.update_infallible(get_in_game(&process, &address));
+                        let in_game_pair = in_game.pair.unwrap_or_default();
+                        if in_game_pair.changed_to(&true) {
+                            timer::start();
+                            timer::pause_game_time();
+                        }
+
+                        // Break loop once timer is active
+                        if timer::state() == timer::TimerState::Running {
+                            break;
+                        }
+
+                        next_tick().await;
                     }
 
-                    next_tick().await;
+                    // Wait three seconds before implementing full split checks to ensure the
+                    // in_menu variable doesn't resume the game timer prematurely
+                    let wait_duration = 3 * TICK_RATE;
+                    for _ in 0..wait_duration {
+                        is_loading.update_infallible(get_is_loading(&process, &address));
+                        let is_loading_pair = is_loading.pair.unwrap_or_default();
+                        if is_loading_pair.changed_to(&false) {
+                            timer::resume_game_time();
+                        }
+
+                        next_tick().await;
+                    }
+
+                    // update
+                    loop {
+                        is_loading.update_infallible(get_is_loading(&process, &address));
+                        in_menu.update_infallible(get_in_menu(&process, &address));
+                        in_game.update_infallible(get_in_game(&process, &address));
+
+                        // isLoading
+                        let is_loading_current = is_loading.pair.unwrap_or_default().current;
+                        let in_menu_current = in_menu.pair.unwrap_or_default().current;
+                        let in_game_current = in_game.pair.unwrap_or_default().current;
+                        if !is_loading_current || in_menu_current || !in_game_current {
+                            timer::resume_game_time();
+                        }
+                        else if is_loading_current {
+                            timer::pause_game_time();
+                        }
+
+                        // Break loop once timer is inactive
+                        if timer::state() != timer::TimerState::Running ||
+                                timer::state() != timer::TimerState::Paused {
+                            break;
+                        }
+
+                        next_tick().await;
+                    }
                 }
             }
         }).await;
