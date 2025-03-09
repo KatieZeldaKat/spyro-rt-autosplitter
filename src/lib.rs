@@ -1,5 +1,14 @@
-use asr::{future::next_tick, print_message, timer, watcher::Watcher, Address, PointerSize, Process};
 asr::async_main!(stable);
+use asr::{
+    future::next_tick,
+    print_message,
+    timer,
+    timer::TimerState,
+    watcher::Watcher,
+    Address,
+    PointerSize,
+    Process,
+};
 
 const EXE: &str = "Spyro-Win64-Shipping.exe";
 const TICK_RATE: i32 = 30;
@@ -15,39 +24,9 @@ async fn main() {
                 // init
                 detect_game_version(&process);
 
-                // state
-                let mut is_loading: Watcher<bool> = Watcher::new();
-                let mut in_menu: Watcher<bool> = Watcher::new();
-                let mut in_game: Watcher<bool> = Watcher::new();
-
                 loop {
                     start(&process, &address).await;
-
-                    // update
-                    loop {
-                        is_loading.update_infallible(get_is_loading(&process, &address));
-                        in_menu.update_infallible(get_in_menu(&process, &address));
-                        in_game.update_infallible(get_in_game(&process, &address));
-
-                        // isLoading
-                        let is_loading_current = is_loading.pair.unwrap_or_default().current;
-                        let in_menu_current = in_menu.pair.unwrap_or_default().current;
-                        let in_game_current = in_game.pair.unwrap_or_default().current;
-                        if !is_loading_current || in_menu_current || !in_game_current {
-                            timer::resume_game_time();
-                        }
-                        else if is_loading_current {
-                            timer::pause_game_time();
-                        }
-
-                        // Break loop once timer is inactive
-                        if timer::state() != timer::TimerState::Running &&
-                                timer::state() != timer::TimerState::Paused {
-                            break;
-                        }
-
-                        next_tick().await;
-                    }
+                    run(&process, &address).await;
                 }
             }
         }).await;
@@ -75,6 +54,29 @@ async fn start(process: &Process, address: &Address) {
     loop {
         if !get_is_loading(&process, &address) {
             timer::resume_game_time();
+            break;
+        }
+
+        next_tick().await;
+    }
+}
+
+async fn run(process: &Process, address: &Address) {
+    loop {
+        let is_loading = get_is_loading(&process, &address);
+        let in_menu = get_in_menu(&process, &address);
+        let in_game = get_in_game(&process, &address);
+
+        // This prevents abuse of buffering loading and pausing at the exact same frame
+        if !is_loading || in_menu || !in_game {
+            timer::resume_game_time();
+        }
+        else if is_loading {
+            timer::pause_game_time();
+        }
+
+        // Break loop once timer is inactive
+        if timer::state() != TimerState::Running && timer::state() != TimerState::Paused {
             break;
         }
 
