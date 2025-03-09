@@ -21,35 +21,7 @@ async fn main() {
                 let mut in_game: Watcher<bool> = Watcher::new();
 
                 loop {
-                    // start
-                    loop {
-                        in_game.update_infallible(get_in_game(&process, &address));
-                        let in_game_pair = in_game.pair.unwrap_or_default();
-                        if in_game_pair.changed_to(&true) {
-                            timer::start();
-                            timer::pause_game_time();
-                        }
-
-                        // Break loop once timer is active
-                        if timer::state() == timer::TimerState::Running {
-                            break;
-                        }
-
-                        next_tick().await;
-                    }
-
-                    // Wait three seconds before implementing full split checks to ensure the
-                    // in_menu variable doesn't resume the game timer prematurely
-                    let wait_duration = 3 * TICK_RATE;
-                    for _ in 0..wait_duration {
-                        is_loading.update_infallible(get_is_loading(&process, &address));
-                        let is_loading_pair = is_loading.pair.unwrap_or_default();
-                        if is_loading_pair.changed_to(&false) {
-                            timer::resume_game_time();
-                        }
-
-                        next_tick().await;
-                    }
+                    start(&process, &address).await;
 
                     // update
                     loop {
@@ -69,7 +41,7 @@ async fn main() {
                         }
 
                         // Break loop once timer is inactive
-                        if timer::state() != timer::TimerState::Running ||
+                        if timer::state() != timer::TimerState::Running &&
                                 timer::state() != timer::TimerState::Paused {
                             break;
                         }
@@ -79,6 +51,34 @@ async fn main() {
                 }
             }
         }).await;
+    }
+}
+
+async fn start(process: &Process, address: &Address) {
+    // Loop until we enter a game from the title screen
+    let mut in_game_watcher = Watcher::<bool>::new();
+    loop {
+        in_game_watcher.update_infallible(get_in_game(&process, &address));
+        if in_game_watcher.pair.unwrap_or_default().changed_to(&true) {
+            break;
+        }
+
+        next_tick().await;
+    }
+
+    // Start the timer and wait a tick before pausing game time (to match ASL)
+    timer::start();
+    next_tick().await;
+    timer::pause_game_time();
+
+    // Wait until game is not loading to resume game time, then exit
+    loop {
+        if !get_is_loading(&process, &address) {
+            timer::resume_game_time();
+            break;
+        }
+
+        next_tick().await;
     }
 }
 
