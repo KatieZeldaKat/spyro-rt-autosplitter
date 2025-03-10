@@ -1,14 +1,12 @@
-asr::async_main!(stable);
+pub mod settings;
+
+use std::collections::HashSet;
+use settings::{get_map_split_setting, Settings, Split};
 use asr::{
-    future::next_tick,
-    print_message,
-    timer,
-    timer::TimerState,
-    watcher::Watcher,
-    Address,
-    PointerSize,
-    Process,
+    future::next_tick, print_message, settings::Gui, string::ArrayWString, timer::{self, TimerState}, watcher::Watcher, Address, PointerSize, Process
 };
+
+asr::async_main!(stable);
 
 const EXE: &str = "Spyro-Win64-Shipping.exe";
 const TICK_RATE: i32 = 30;
@@ -16,6 +14,7 @@ const TICK_RATE: i32 = 30;
 async fn main() {
     // startup
     asr::set_tick_rate(f64::from(TICK_RATE));
+    let mut settings = Settings::register();
 
     loop {
         let process = Process::wait_attach(EXE).await;
@@ -26,7 +25,7 @@ async fn main() {
 
                 loop {
                     start(&process, &address).await;
-                    run(&process, &address).await;
+                    run(&process, &address, &mut settings).await;
                 }
             }
         }).await;
@@ -61,13 +60,24 @@ async fn start(process: &Process, address: &Address) {
     }
 }
 
-async fn run(process: &Process, address: &Address) {
+async fn run(process: &Process, address: &Address, settings: &mut Settings) {
+    // Assumes settings will not be updated mid-run; update here if they were changed between runs
+    settings.update();
+
+    let mut map_watcher = Watcher::<String>::new();
+    let mut split_maps = HashSet::<String>::new();
     loop {
+        // Break loop once timer is inactive
+        if timer::state() != TimerState::Running && timer::state() != TimerState::Paused {
+            break;
+        }
+
+        // Determine game timer state
         let is_loading = get_is_loading(&process, &address);
         let in_menu = get_in_menu(&process, &address);
         let in_game = get_in_game(&process, &address);
 
-        // This prevents abuse of buffering loading and pausing at the exact same frame
+        // This prevents abuse of buffering loading and pausing in the exact same frame
         if !is_loading || in_menu || !in_game {
             timer::resume_game_time();
         }
@@ -75,9 +85,21 @@ async fn run(process: &Process, address: &Address) {
             timer::pause_game_time();
         }
 
-        // Break loop once timer is inactive
-        if timer::state() != TimerState::Running && timer::state() != TimerState::Paused {
-            break;
+        // Automatically split on map change
+        map_watcher.update_infallible(get_map(&process, &address));
+        let map = map_watcher.pair.clone().unwrap();
+        if map.changed() {
+            match get_map_split_setting(&map.old, &settings) {
+                Split::FirstTime => {
+                    if split_maps.insert(map.old) {
+                        timer::split();
+                    }
+                },
+                Split::EveryTime => {
+                    timer::split();
+                },
+                Split::Never => {},
+            };
         }
 
         next_tick().await;
@@ -152,4 +174,23 @@ fn get_in_game(process: &Process, address: &Address) -> bool {
     }
 
     return false;
+}
+
+fn get_map(process: &Process, address: &Address) -> String {
+    if let Ok(map_raw) = process.read_pointer_path::<ArrayWString<256>>(
+        *address,
+        PointerSize::Bit64,
+        &[0x03415F30, 0x138, 0xB0, 0xB0, 0x598, 0x210, 0xB8, 0x148, 0x190, 0x0]
+    ) {
+        let map = String::from_utf16(&map_raw.as_slice()).unwrap();
+
+        timer::set_variable(
+            "map",
+            &map,
+        );
+
+        return map;
+    }
+
+    return "".to_string();
 }
