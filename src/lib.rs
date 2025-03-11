@@ -25,7 +25,8 @@ async fn main() {
 
                 loop {
                     start(&process, &address).await;
-                    run(&process, &address, &mut settings).await;
+                    settings.update();
+                    run(&process, &address, &settings).await;
                 }
             }
         }).await;
@@ -60,10 +61,7 @@ async fn start(process: &Process, address: &Address) {
     }
 }
 
-async fn run(process: &Process, address: &Address, settings: &mut Settings) {
-    // Assumes settings will not be updated mid-run; update here if they were changed between runs
-    settings.update();
-
+async fn run(process: &Process, address: &Address, settings: &Settings) {
     let mut map_watcher = Watcher::<String>::new();
     let mut split_maps = HashSet::<String>::new();
     loop {
@@ -72,12 +70,16 @@ async fn run(process: &Process, address: &Address, settings: &mut Settings) {
             break;
         }
 
-        // Determine game timer state
+        // Reset timer on title screen
+        let in_game = get_in_game(&process, &address);
+        if !in_game && settings.reset_on_title {
+            timer::reset();
+            break;
+        }
+
+        // in_menu check prevents abuse of buffering loading and pausing in the exact same frame
         let is_loading = get_is_loading(&process, &address);
         let in_menu = get_in_menu(&process, &address);
-        let in_game = get_in_game(&process, &address);
-
-        // This prevents abuse of buffering loading and pausing in the exact same frame
         if !is_loading || in_menu || !in_game {
             timer::resume_game_time();
         }
