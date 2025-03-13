@@ -34,42 +34,30 @@ async fn main() {
 }
 
 async fn start(process: &Process, address: &Address) {
-    // Loop until we enter a game from the title screen
-    let mut in_game_watcher = Watcher::<bool>::new();
-    loop {
-        in_game_watcher.update_infallible(get_in_game(&process, &address));
-        if in_game_watcher.pair.unwrap_or_default().changed_to(&true) {
-            break;
-        }
-
+    // Wait until we enter a game from the title screen
+    let mut in_game = Watcher::<bool>::new();
+    while !in_game.update_infallible(get_in_game(&process, &address)).changed_to(&true) {
         next_tick().await;
     }
 
-    // Start the timer and wait a tick before pausing game time (to match ASL)
+    // Start the timer and wait a tick before pausing the game time (to match ASL)
     timer::start();
     next_tick().await;
     timer::pause_game_time();
 
-    // Wait until game is not loading to resume game time, then exit
-    loop {
-        if !get_is_loading(&process, &address) {
-            timer::resume_game_time();
-            break;
-        }
-
+    // Wait until the game is no longer loading
+    while get_is_loading(&process, &address) {
         next_tick().await;
     }
+
+    // Resume the game time, then exit
+    timer::resume_game_time();
 }
 
 async fn run(process: &Process, address: &Address, settings: &Settings) {
     let mut map_watcher = Watcher::<String>::new();
     let mut split_maps = HashSet::<String>::new();
-    loop {
-        // Break loop once timer is inactive
-        if timer::state() != TimerState::Running && timer::state() != TimerState::Paused {
-            break;
-        }
-
+    while timer::state() == TimerState::Running || timer::state() == TimerState::Paused {
         // Reset timer on title screen
         let in_game = get_in_game(&process, &address);
         if !in_game && settings.reset_on_title {
