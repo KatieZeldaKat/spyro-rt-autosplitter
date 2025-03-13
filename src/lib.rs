@@ -3,7 +3,7 @@ pub mod settings;
 use std::collections::HashSet;
 use settings::{get_map_split_setting, Settings, Split};
 use asr::{
-    future::next_tick, print_message, settings::Gui, string::ArrayWString, timer::{self, TimerState}, watcher::Watcher, Address, PointerSize, Process
+    future::next_tick, print_message, settings::Gui, string::ArrayWString, timer::{self, TimerState}, watcher::{Pair, Watcher}, Address, PointerSize, Process
 };
 
 asr::async_main!(stable);
@@ -88,14 +88,11 @@ async fn run(process: &Process, address: &Address, settings: &Settings) {
         }
 
         // Automatically split on map change
-        map_watcher.update_infallible(get_map(&process, &address));
-        let map = map_watcher.pair.clone().unwrap();
-        if map.changed() {
+        let map = map_watcher.update_infallible(get_map(&process, &address));
+        if map.changed() && is_valid_map_transition(&map) {
             match get_map_split_setting(&map.old, &settings) {
-                Split::FirstTime => {
-                    if split_maps.insert(map.old) {
-                        timer::split();
-                    }
+                Split::FirstTime => if split_maps.insert(map.old.clone()) {
+                    timer::split();
                 },
                 Split::EveryTime => {
                     timer::split();
@@ -115,6 +112,15 @@ fn detect_game_version(process: &Process) {
     else {
         print_message("Spyro Reignited Trilogy ASL started (unknown game version)");
         print_message(&process.get_module_size(EXE).unwrap().to_string());
+    }
+}
+
+fn is_valid_map_transition(map: &Pair<String>) -> bool {
+    match &map.old as &str {
+        "/LS208_CrushsDungeon/Maps/" => return "/LS210_AutumnPlains_Home/Maps/" == map.current,
+        "/LS219_GulpsOverlook/Maps/" => return "/LS222_WinterTundra_Home/Maps/" == map.current,
+        "/LS227_RiptosArena/Maps/" => return "/LS229_DragonShores/Maps/" == map.current,
+        _ => return true,
     }
 }
 
