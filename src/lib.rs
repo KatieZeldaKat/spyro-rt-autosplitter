@@ -1,7 +1,7 @@
 pub mod settings;
 
 use std::collections::HashSet;
-use settings::{get_map_split_setting, Settings, Split};
+use settings::{Settings, Split};
 use asr::{
     future::next_tick, print_message, settings::Gui, string::ArrayWString, timer::{self, TimerState}, watcher::{Pair, Watcher}, Address, PointerSize, Process
 };
@@ -78,7 +78,7 @@ async fn run(process: &Process, address: &Address, settings: &Settings) {
         // Automatically split on map change
         let map = map_watcher.update_infallible(get_map(&process, &address));
         if map.changed() && is_valid_map_transition(&map) {
-            match get_map_split_setting(&map.old, &settings) {
+            match settings.get_map_split_setting(&map.old) {
                 Split::FirstTime => if split_maps.insert(map.old.clone()) {
                     timer::split();
                 },
