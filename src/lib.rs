@@ -2,6 +2,7 @@ pub mod settings;
 
 use std::collections::HashSet;
 use settings::{Settings, Split};
+use bytemuck::Pod;
 use asr::{
     future::next_tick, print_message, settings::Gui, string::ArrayWString, timer::{self, TimerState}, watcher::{Pair, Watcher}, Address, PointerSize, Process
 };
@@ -113,80 +114,57 @@ fn is_valid_map_transition(map: &Pair<String>) -> bool {
 }
 
 fn get_is_loading(process: &Process, address: &Address) -> bool {
-    if let Ok(is_not_loading_raw) = process.read_pointer_path::<u8>(
-        *address,
-        PointerSize::Bit64,
-        &[0x03415F30, 0xF8, 0x4A8, 0xE19]
-    ) {
-        // Set to 0 when loading, set to 1 otherwise
-        let is_loading_value = is_not_loading_raw == 0;
+    let path = &[0x03415F30, 0xF8, 0x4A8, 0xE19];
+    let is_loading_raw = safely_read_memory(&process, &address, path, u8::default());
 
-        timer::set_variable(
-            "is_loading",
-            &is_loading_value.to_string()
-        );
+    // Set to 0 when loading, set to 1 otherwise
+    let is_loading = is_loading_raw == 0;
 
-        return is_loading_value;
-    }
+    timer::set_variable("is_loading", &is_loading.to_string());
 
-    return true;
+    return is_loading;
 }
 
 fn get_in_menu(process: &Process, address: &Address) -> bool {
-    if let Ok(in_menu_raw) = process.read_pointer_path::<u8>(
-        *address,
-        PointerSize::Bit64,
-        &[0x034160D0, 0x20, 0x218, 0x60]
-    ) {
-        // Set to 0 in game, 1 if in menu, 15 if in graphics submenu
-        let in_menu_value = in_menu_raw > 0;
+    let path = &[0x034160D0, 0x20, 0x218, 0x60];
+    let in_menu_raw = safely_read_memory(&process, &address, path, u8::default());
 
-        timer::set_variable(
-            "in_menu",
-            &in_menu_value.to_string()
-        );
+    // Set to 0 in game, 1 if in menu, 15 if in graphics submenu
+    let in_menu = in_menu_raw > 0;
 
-        return in_menu_value;
-    }
+    timer::set_variable("in_menu", &in_menu.to_string());
 
-    return true;
+    return in_menu;
 }
 
 fn get_in_game(process: &Process, address: &Address) -> bool {
-    if let Ok(in_game_raw) = process.read_pointer_path::<u8>(
-        *address,
-        PointerSize::Bit64,
-        &[0x03415F30, 0xF0, 0x378, 0x564]
-    ) {
-        // Set to 0 in title screen and main menu, set to 1 everywhere else
-        let in_game_value = in_game_raw > 0;
+    let path = &[0x03415F30, 0xF0, 0x378, 0x564];
+    let in_game_raw = safely_read_memory(&process, &address, path, u8::default());
 
-        timer::set_variable(
-            "in_game",
-            &in_game_value.to_string()
-        );
+    // Set to 0 in title screen and main menu, set to 1 everywhere else
+    let in_game = in_game_raw > 0;
 
-        return in_game_value;
-    }
+    timer::set_variable("in_game", &in_game.to_string());
 
-    return false;
+    return in_game;
 }
 
 fn get_map(process: &Process, address: &Address) -> String {
-    if let Ok(map_raw) = process.read_pointer_path::<ArrayWString<256>>(
-        *address,
-        PointerSize::Bit64,
-        &[0x03415F30, 0x138, 0xB0, 0xB0, 0x598, 0x210, 0xB8, 0x148, 0x190, 0x0]
-    ) {
-        let map = String::from_utf16(&map_raw.as_slice()).unwrap();
+    let path = &[0x03415F30, 0x138, 0xB0, 0xB0, 0x598, 0x210, 0xB8, 0x148, 0x190, 0x0];
+    let map_raw = safely_read_memory(&process, &address, path, ArrayWString::<256>::default());
 
-        timer::set_variable(
-            "map",
-            &map,
-        );
+    // String that looks like a folder path (i.e. "/LS102_StoneHill/Maps/")
+    let map = String::from_utf16(&map_raw.as_slice()).unwrap();
 
-        return map;
+    timer::set_variable("map", &map,);
+
+    return map;
+}
+
+fn safely_read_memory<T: Pod>(process: &Process, address: &Address, path: &[u64], default: T) -> T {
+    if let Ok(data) = process.read_pointer_path::<T>(*address, PointerSize::Bit64, path) {
+        return data;
     }
 
-    return "".to_string();
+    return default;
 }
