@@ -56,8 +56,9 @@ async fn start(process: &Process, address: &Address) {
 }
 
 async fn run(process: &Process, address: &Address, settings: &Settings) {
+    let mut has_split = HashSet::<String>::new();
     let mut map_watcher = Watcher::<String>::new();
-    let mut split_maps = HashSet::<String>::new();
+    let mut ripto_watcher = Watcher::<u8>::new();
     while timer::state() == TimerState::Running || timer::state() == TimerState::Paused {
         // Reset timer on title screen
         let in_game = get_in_game(&process, &address);
@@ -80,7 +81,7 @@ async fn run(process: &Process, address: &Address, settings: &Settings) {
         let map = map_watcher.update_infallible(get_map(&process, &address));
         if map.changed() && is_valid_map_transition(&map) {
             match settings.get_map_split_setting(&map.old) {
-                Split::FirstTime => if split_maps.insert(map.old.clone()) {
+                Split::FirstTime => if has_split.insert(map.old.clone()) {
                     timer::split();
                 },
                 Split::EveryTime => {
@@ -88,6 +89,25 @@ async fn run(process: &Process, address: &Address, settings: &Settings) {
                 },
                 Split::Never => {},
             };
+        }
+
+        // Ripto's Arena
+        if map.current == "/LS227_RiptosArena/Maps/" {
+            let ripto_health =
+                    ripto_watcher.update_infallible(get_ripto_health(&process, &address));
+
+            // Split on kill according to the settings
+            if ripto_health.changed_from_to(&1, &0) {
+                match settings.s2_ripto_kill {
+                    Split::FirstTime => if has_split.insert(String::from("s2_ripto_kill")) {
+                        timer::split();
+                    },
+                    Split::EveryTime => {
+                        timer::split();
+                    },
+                    Split::Never => {},
+                }
+            }
         }
 
         next_tick().await;
@@ -147,6 +167,17 @@ fn get_in_game(process: &Process, address: &Address) -> bool {
     timer::set_variable("in_game", &in_game.to_string());
 
     return in_game;
+}
+
+fn get_ripto_health(process: &Process, address: &Address) -> u8 {
+    let path = &[0x03415F30, 0x110, 0x50, 0x140, 0x8, 0x1D0, 0x134];
+
+    // Set to 8 at beginning of fight, decreases towards 0 as damage is taken in 3rd phase
+    let ripto_health = safely_read_memory(&process, &address, path, 8);
+
+    timer::set_variable("ripto_health", &ripto_health.to_string());
+
+    return ripto_health;
 }
 
 fn get_map(process: &Process, address: &Address) -> String {

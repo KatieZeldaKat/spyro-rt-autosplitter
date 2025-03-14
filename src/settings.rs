@@ -17,9 +17,13 @@ pub struct Settings {
     #[default = false]
     pub reset_on_title: bool,
 
-    /// Spyro 1 Split on Exit
+    /// Spyro 1
     #[heading_level = 0]
     _title_s1: Title,
+
+    /// Split on Exit
+    #[heading_level = 1]
+    _title_s1_exit: Title,
 
     /// Stone Hill
     s1_stone_hill: Split,
@@ -108,9 +112,16 @@ pub struct Settings {
     /// Gnasty's Loot
     s1_gnastys_loot: Split,
 
-    /// Spyro 2 Split on Exit
+    /// Spyro 2
     #[heading_level = 0]
     _title_s2: Title,
+
+    /// Split on Ripto Kill
+    pub s2_ripto_kill: Split,
+
+    /// Split on Exit
+    #[heading_level = 1]
+    _title_s2_exit: Title,
 
     /// Glimmer
     s2_glimmer: Split,
@@ -190,9 +201,14 @@ pub struct Settings {
     /// Dragon Shores
     s2_dragon_shores: Split,
 
-    /// Spyro 3 Split on Exit
+    /// Spyro 3
     #[heading_level = 0]
     _title_s3: Title,
+
+    /// Split on Exit
+    #[heading_level = 1]
+    _title_s3_exit: Title,
+
 
     /// Sunny Villa
     s3_sunny_villa: Split,
