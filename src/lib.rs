@@ -95,10 +95,10 @@ async fn run(process: &Process, address: &Address, settings: &Settings) {
 
 fn detect_game_version(process: &Process) {
     if process.get_module_size(EXE).unwrap() == 61046784 {
-        print_message("Spyro Reignited Trilogy ASL started (game version detected: Release)");
+        print_message("Spyro Reignited Trilogy WASM started (game version detected: Release)");
     }
     else {
-        print_message("Spyro Reignited Trilogy ASL started (unknown game version)");
+        print_message("Spyro Reignited Trilogy WASM started (unknown game version)");
         print_message(&process.get_module_size(EXE).unwrap().to_string());
     }
 }
