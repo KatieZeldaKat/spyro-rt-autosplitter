@@ -209,7 +209,6 @@ pub struct Settings {
     #[heading_level = 1]
     _title_s3_exit: Title,
 
-
     /// Sunny Villa
     s3_sunny_villa: Split,
 
