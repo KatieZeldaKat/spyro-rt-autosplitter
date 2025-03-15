@@ -41,13 +41,12 @@ async fn start(process: &Process, address: &Address) {
         next_tick().await;
     }
 
-    // Start the timer and wait a tick before pausing the game time (to match ASL)
+    // Start the timer and pause game time
     timer::start();
-    next_tick().await;
     timer::pause_game_time();
 
-    // Wait until the game is no longer loading
-    while get_is_loading(&process, &address) {
+    // Wait until Spyro can move
+    while !get_in_control(&process, &address) {
         next_tick().await;
     }
 
@@ -134,6 +133,18 @@ fn is_valid_map_transition(map: &Pair<String>) -> bool {
         "/LS227_RiptosArena/Maps/" => return "/LS229_DragonShores/Maps/" == map.current,
         _ => return true,
     }
+}
+
+fn get_in_control(process: &Process, address: &Address) -> bool {
+    let path = &[0x03415F30, 0xF8, 0x478];
+    let in_control_raw = safely_read_memory(&process, &address, path, u8::default());
+
+    // Set to 0 when immobilized, 1 once Spyro can move
+    let in_control = in_control_raw > 0;
+
+    timer::set_variable("in_control", &in_control.to_string());
+
+    return in_control;
 }
 
 fn get_is_loading(process: &Process, address: &Address) -> bool {
