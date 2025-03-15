@@ -35,40 +35,52 @@ async fn main() {
 }
 
 async fn start(process: &Process, address: &Address) {
-    // Wait until we enter a game from the title screen
+    // Wait until we enter a game from the title screen before starting timer
     let mut in_game = Watcher::<bool>::new();
     while !in_game.update_infallible(get_in_game(&process, &address)).changed_to(&true) {
         next_tick().await;
     }
 
-    // Start the timer and pause game time
     timer::start();
-    timer::pause_game_time();
-
-    // Wait until Spyro can move
-    while !get_in_control(&process, &address) {
-        next_tick().await;
-    }
-
-    // Resume the game time, then exit
-    timer::resume_game_time();
 }
 
 async fn run(process: &Process, address: &Address, settings: &Settings) {
-    let mut has_split = HashSet::<String>::new();
+    // Maps
     let mut map_watcher = Watcher::<String>::new();
+    let mut has_split = HashSet::<String>::new();
+
+    // Game
+    let mut game_watcher = Watcher::<u8>::new();
+    let mut game_started = HashSet::<u8>::from([get_game(&process, &address)]);
+
+    // Bosses
     let mut ripto_watcher = Watcher::<u8>::new();
+
     while timer::state() == TimerState::Running || timer::state() == TimerState::Paused {
-        // Reset timer on title screen
-        let in_game = get_in_game(&process, &address);
-        if !in_game && settings.reset_on_title {
-            timer::reset();
-            break;
+        // Check if in title or starting a new game
+        let game = game_watcher.update_infallible(get_game(&process, &address));
+        if game.changed() && game_started.insert(game.current) {
+            match game.current {
+                0 => if settings.reset_on_title {
+                    timer::reset();
+                    break;
+                },
+                1..3 => {
+                    timer::pause_game_time();
+                    while !get_in_control(&process, &address) {
+                        next_tick().await;
+                    }
+                },
+                _ => {},
+            }
         }
 
-        // in_menu check prevents abuse of buffering loading and pausing in the exact same frame
+        // Read memory to determine game timer state
         let is_loading = get_is_loading(&process, &address);
         let in_menu = get_in_menu(&process, &address);
+        let in_game = get_in_game(&process, &address);
+
+        // in_menu check prevents abuse of buffering loading and pausing in the exact same frame
         if !is_loading || in_menu || !in_game {
             timer::resume_game_time();
         }
@@ -181,6 +193,17 @@ fn get_in_game(process: &Process, address: &Address) -> bool {
     timer::set_variable("in_game", &in_game.to_string());
 
     return in_game;
+}
+
+fn get_game(process: &Process, address: &Address) -> u8 {
+    let path = &[0x03415F30, 0xF8, 0x290, 0x0, 0x1F8];
+
+    // Set to 0 in title screen, 1-3 corresponding to Spyro 1-3
+    let game = safely_read_memory(&process, &address, path, u8::default());
+
+    timer::set_variable("game", &game.to_string());
+
+    return game;
 }
 
 fn get_ripto_health(process: &Process, address: &Address) -> u8 {
