@@ -54,7 +54,7 @@ async fn run(process: &Process, address: &Address, settings: &Settings) {
     let mut game_started = HashSet::<u8>::from([get_game(&process, &address)]);
 
     // Bosses
-    let mut ripto_watcher = Watcher::<u8>::new();
+    let mut boss_watcher = Watcher::<u8>::new();
 
     while timer::state() == TimerState::Running || timer::state() == TimerState::Paused {
         // Check if in title or starting a new game
@@ -102,23 +102,21 @@ async fn run(process: &Process, address: &Address, settings: &Settings) {
             };
         }
 
-        // Ripto's Arena
-        if map.current == "/LS227_RiptosArena/Maps/" {
-            let ripto_health =
-                    ripto_watcher.update_infallible(get_ripto_health(&process, &address));
-
-            // Split on kill according to the settings
-            if ripto_health.changed_from_to(&1, &0) {
-                match settings.s2_ripto_kill {
-                    Split::FirstTime => if has_split.insert(String::from("s2_ripto_kill")) {
-                        timer::split();
-                    },
-                    Split::EveryTime => {
-                        timer::split();
-                    },
-                    Split::Never => {},
+        // Split on kill for boss fights
+        match &map.current as &str {
+            "/LS227_RiptosArena/Maps/" => {
+                let health = get_ripto_health(&process, &address);
+                if boss_killed(&mut boss_watcher, health) && settings.s2_ripto_kill {
+                    timer::split();
                 }
-            }
+            },
+            "/LS335_SorceressLair/Maps/" => {
+                let health = get_sorceress_lair_health(&process, &address);
+                if boss_killed(&mut boss_watcher, health) && settings.s3_sorceress_lair_kill {
+                    timer::split();
+                }
+            },
+            _ => {}
         }
 
         next_tick().await;
@@ -145,6 +143,11 @@ fn is_valid_map_transition(map: &Pair<String>) -> bool {
         "/LS227_RiptosArena/Maps/" => return "/LS229_DragonShores/Maps/" == map.current,
         _ => return true,
     }
+}
+
+fn boss_killed(boss_watcher: &mut Watcher<u8>, current_health: u8) -> bool {
+    let health = boss_watcher.update_infallible(current_health);
+    return health.changed_from_to(&1, &0);
 }
 
 fn get_in_control(process: &Process, address: &Address) -> bool {
@@ -215,6 +218,17 @@ fn get_ripto_health(process: &Process, address: &Address) -> u8 {
     timer::set_variable("ripto_health", &ripto_health.to_string());
 
     return ripto_health;
+}
+
+fn get_sorceress_lair_health(process: &Process, address: &Address) -> u8 {
+    let path = &[0x03601278, 0x40, 0x58, 0x20, 0xB0, 0x90, 0x140, 0xA28];
+
+    // Set to 10 at beginning of fight, decreases towards 0 as damage is taken
+    let sorceress_lair_health = safely_read_memory(&process, &address, path, 10);
+
+    timer::set_variable("sorceress_lair_health", &sorceress_lair_health.to_string());
+
+    return sorceress_lair_health;
 }
 
 fn get_map(process: &Process, address: &Address) -> String {

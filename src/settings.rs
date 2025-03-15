@@ -117,7 +117,8 @@ pub struct Settings {
     _title_s2: Title,
 
     /// Split on Ripto Kill
-    pub s2_ripto_kill: Split,
+    #[default = true]
+    pub s2_ripto_kill: bool,
 
     /// Split on Exit
     #[heading_level = 1]
@@ -204,6 +205,10 @@ pub struct Settings {
     /// Spyro 3
     #[heading_level = 0]
     _title_s3: Title,
+
+    /// Split on Sorceress Lair Kill
+    #[default = true]
+    pub s3_sorceress_lair_kill: bool,
 
     /// Split on Exit
     #[heading_level = 1]
@@ -397,7 +402,7 @@ impl Settings {
             "/LS332_DinoMines/Maps/" => self.s3_dino_mines,
             "/LS333_Agent9sLab/Maps/" => self.s3_agent_9s_lab,
             "/LS334_HarborSpeedway/Maps/" => self.s3_harbor_speedway,
-            "/LS335_SorceresssLair/Maps/" => self.s3_sorceresss_lair,
+            "/LS335_SorceressLair/Maps/" => self.s3_sorceresss_lair,
             "/LS336_BugbotFactory/Maps/" => self.s3_bugbot_factory,
             "/LS337_SuperBonusRound/Maps/" => self.s3_super_bonus,
             _ => Split::Never,
