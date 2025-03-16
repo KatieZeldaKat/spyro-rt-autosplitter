@@ -25,60 +25,78 @@ async fn main() {
                 detect_game_version(&process);
 
                 loop {
-                    start(&process, &address).await;
-                    settings.update();
-                    run(&process, &address, &settings).await;
+                    start_run(&process, &address, &mut settings).await;
                 }
             }
         }).await;
     }
 }
 
-async fn start(process: &Process, address: &Address) {
-    // Wait until we enter a game from the title screen before starting timer
-    let mut in_game = Watcher::<bool>::new();
-    while !in_game.update_infallible(get_in_game(&process, &address)).changed_to(&true) {
-        next_tick().await;
-    }
+async fn start_run(process: &Process, address: &Address, settings: &mut Settings) {
+    let mut games_started = HashSet::<u8>::new();
 
-    timer::start();
+    loop {
+        // Wait until a game is selected
+        let timer_was_running = timer_running();
+        let mut in_game = Watcher::<bool>::new();
+        while !in_game.update_infallible(get_in_game(&process, &address)).changed_to(&true) {
+            if timer_was_running && !timer_running() {
+                return;
+            }
+            next_tick().await;
+        }
+
+        // If it wasn't yet selected this run, wait until the player has control to start time
+        if games_started.insert(get_game(&process, &address)) {
+            timer::start();
+            timer::pause_game_time();
+
+            // Wait to gain control
+            while !get_in_control(&process, &address) {
+                next_tick().await;
+            }
+            if !timer_running() {
+                return;
+            }
+        }
+
+        timer::resume_game_time();
+
+        // Update settings; assumes no settings are modified mid-game
+        settings.update();
+
+        // Main autosplitter logic
+        continue_run(&process, &address, &settings).await;
+        if !timer_running() {
+            return;
+        }
+
+        timer::resume_game_time();
+    }
 }
 
-async fn run(process: &Process, address: &Address, settings: &Settings) {
+async fn continue_run(process: &Process, address: &Address, settings: &Settings) {
     // Maps
     let mut map_watcher = Watcher::<String>::new();
     let mut has_split = HashSet::<String>::new();
-
-    // Game
-    let mut game_watcher = Watcher::<u8>::new();
-    let mut game_started = HashSet::<u8>::from([get_game(&process, &address)]);
 
     // Bosses
     let mut boss_watcher = Watcher::<u8>::new();
 
     while timer::state() == TimerState::Running || timer::state() == TimerState::Paused {
-        // Check if in title or starting a new game
-        let game = game_watcher.update_infallible(get_game(&process, &address));
-        if game.changed() && game_started.insert(game.current) {
-            match game.current {
-                0 => if settings.reset_on_title {
-                    timer::reset();
-                    break;
-                },
-                1..3 => {
-                    timer::pause_game_time();
-                    while !get_in_control(&process, &address) {
-                        next_tick().await;
-                    }
-                },
-                _ => {},
+        // If no longer in game, exit
+        let in_game = get_in_game(&process, &address);
+        if !in_game {
+            if settings.reset_on_title {
+                timer::reset();
             }
+
+            return;
         }
 
         // Read memory to determine game timer state
         let is_loading = get_is_loading(&process, &address);
         let in_menu = get_in_menu(&process, &address);
-        let in_game = get_in_game(&process, &address);
 
         // in_menu check prevents abuse of buffering loading and pausing in the exact same frame
         if !is_loading || in_menu || !in_game {
@@ -134,6 +152,10 @@ fn detect_game_version(process: &Process) {
         print_message("Spyro Reignited Trilogy WASM started (unknown game version)");
         print_message(&process.get_module_size(EXE).unwrap().to_string());
     }
+}
+
+fn timer_running() -> bool {
+    return timer::state() == TimerState::Running || timer::state() == TimerState::Paused;
 }
 
 fn is_valid_map_transition(map: &Pair<String>) -> bool {
