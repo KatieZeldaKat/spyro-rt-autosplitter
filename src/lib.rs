@@ -29,6 +29,10 @@ async fn main() {
                 }
             }
         }).await;
+
+        if settings.reset_on_close {
+            timer::reset();
+        }
     }
 }
 

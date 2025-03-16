@@ -17,6 +17,10 @@ pub struct Settings {
     #[default = false]
     pub reset_on_title: bool,
 
+    /// Reset timer when game closes
+    #[default = false]
+    pub reset_on_close: bool,
+
     /// Spyro 1
     #[heading_level = 0]
     _title_s1: Title,
