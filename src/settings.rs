@@ -388,7 +388,7 @@ impl Settings {
             "/LS312_EnchantedTowers/Maps/" => self.s3_enchanted_towers,
             "/LS313_SpookySwamp/Maps/" => self.s3_spooky_swamp,
             "/LS314_BambooTerrace/Maps/" => self.s3_bamboo_terrace,
-            "/LS315_SgtByrdsBase/Maps/" => self.s3_sgt_byrds_base,
+            "/LS315_SgtByrdBase/Maps/" => self.s3_sgt_byrds_base,
             "/LS316_CountrySpeedway/Maps/" => self.s3_country_speedway,
             "/LS317_SpikesArena/Maps/" => self.s3_spikes_arena,
             "/LS318_SpiderTown/Maps/" => self.s3_spider_town,
