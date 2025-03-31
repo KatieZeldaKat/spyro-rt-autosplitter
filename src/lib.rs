@@ -111,7 +111,8 @@ async fn continue_run(process: &Process, address: &Address, settings: &Settings)
         }
 
         // Automatically split on map change
-        if let Some(map) = map_watcher.update(get_map(&process, &address)) {
+        if let Some(current_map) = get_map(&process, &address) {
+            let map = map_watcher.update_infallible(current_map);
             if map.changed() && is_valid_map_transition(&map) {
                 match settings.get_map_split_setting(&map.old) {
                     Split::FirstTime => if has_split.insert(map.old.clone()) {
