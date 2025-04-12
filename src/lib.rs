@@ -2,12 +2,12 @@ mod memory;
 mod settings;
 
 use asr::{
+    Process,
     future::next_tick,
     print_message,
     settings::Gui,
     timer::{self, TimerState},
     watcher::Watcher,
-    Process,
 };
 use memory::{Boss, Memory};
 use settings::Settings;
@@ -54,26 +54,26 @@ async fn main() {
     }
 }
 
-async fn run<'a>(memory: &Memory<'a>, settings: &mut Settings) {
+async fn run(memory: &Memory<'_>, settings: &mut Settings) {
     let mut games_started = HashSet::<u8>::new();
 
     loop {
-        return_if_timer_reset_after!(select_game(&memory).await);
+        return_if_timer_reset_after!(select_game(memory).await);
 
         // Only if we haven't entered this game yet should we wait to gain control
         if games_started.insert(memory.read_game()) {
-            return_if_timer_reset_after!(gain_control(&memory).await);
+            return_if_timer_reset_after!(gain_control(memory).await);
         }
 
         // Update settings; assumes no settings are modified mid-game
         settings.update();
 
-        return_if_timer_reset_after!(run_game(&memory, &settings).await);
+        return_if_timer_reset_after!(run_game(memory, settings).await);
         timer::resume_game_time();
     }
 }
 
-async fn select_game<'a>(memory: &Memory<'a>) {
+async fn select_game(memory: &Memory<'_>) {
     let is_mid_run = timer_running();
     let mut in_game = Watcher::<bool>::new();
     while !in_game
@@ -90,7 +90,7 @@ async fn select_game<'a>(memory: &Memory<'a>) {
     timer::start();
 }
 
-async fn gain_control<'a>(memory: &Memory<'a>) {
+async fn gain_control(memory: &Memory<'_>) {
     timer::pause_game_time();
 
     while !memory.read_in_control() {
@@ -100,7 +100,7 @@ async fn gain_control<'a>(memory: &Memory<'a>) {
     timer::resume_game_time();
 }
 
-async fn run_game<'a>(memory: &Memory<'a>, settings: &Settings) {
+async fn run_game(memory: &Memory<'_>, settings: &Settings) {
     // Maps
     let mut map_watcher = Watcher::<String>::new();
     let mut has_split = HashSet::<String>::new();
@@ -136,7 +136,7 @@ async fn run_game<'a>(memory: &Memory<'a>, settings: &Settings) {
             let map = map_watcher.update_infallible(current_map);
             if map.changed() {
                 // Split on map change
-                if settings.should_split(&map, &mut has_split) {
+                if settings.should_split(map, &mut has_split) {
                     timer::split();
                 }
 
@@ -166,7 +166,7 @@ async fn run_game<'a>(memory: &Memory<'a>, settings: &Settings) {
 }
 
 fn timer_running() -> bool {
-    return timer::state() == TimerState::Running || timer::state() == TimerState::Paused;
+    timer::state() == TimerState::Running || timer::state() == TimerState::Paused
 }
 
 fn detect_game_version(process: &Process) {

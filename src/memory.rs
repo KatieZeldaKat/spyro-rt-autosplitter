@@ -1,4 +1,4 @@
-use asr::{string::ArrayWString, timer, Address, PointerSize, Process};
+use asr::{Address, PointerSize, Process, string::ArrayWString, timer};
 use bytemuck::Pod;
 
 #[derive(Clone, Copy)]
@@ -16,7 +16,7 @@ pub struct Memory<'a> {
 
 impl<'a> Memory<'a> {
     pub fn new(process: &'a Process, address: Address) -> Self {
-        return Self { process, address };
+        Self { process, address }
     }
 
     pub fn read_map(&self) -> Option<String> {
@@ -30,7 +30,7 @@ impl<'a> Memory<'a> {
             return Some(map);
         }
 
-        return None;
+        None
     }
 
     pub fn read_is_loading(&self) -> bool {
@@ -42,7 +42,7 @@ impl<'a> Memory<'a> {
 
         timer::set_variable("is_loading", &is_loading.to_string());
 
-        return is_loading;
+        is_loading
     }
 
     pub fn read_in_menu(&self) -> bool {
@@ -54,7 +54,7 @@ impl<'a> Memory<'a> {
 
         timer::set_variable("in_menu", &in_menu.to_string());
 
-        return in_menu;
+        in_menu
     }
 
     pub fn read_in_game(&self) -> bool {
@@ -66,7 +66,7 @@ impl<'a> Memory<'a> {
 
         timer::set_variable("in_game", &in_game.to_string());
 
-        return in_game;
+        in_game
     }
 
     pub fn read_in_control(&self) -> bool {
@@ -78,7 +78,7 @@ impl<'a> Memory<'a> {
 
         timer::set_variable("in_control", &in_control.to_string());
 
-        return in_control;
+        in_control
     }
 
     pub fn read_game(&self) -> u8 {
@@ -89,7 +89,7 @@ impl<'a> Memory<'a> {
 
         timer::set_variable("game", &game.to_string());
 
-        return game;
+        game
     }
 
     pub fn read_boss(&self) -> Boss {
@@ -101,15 +101,15 @@ impl<'a> Memory<'a> {
             };
         }
 
-        return Boss::None;
+        Boss::None
     }
 
     pub fn read_boss_health(&self, boss: Boss) -> u8 {
-        return match boss {
+        match boss {
             Boss::Ripto => self.read_ripto_health(),
             Boss::SorceressLair => self.read_sorceress_lair_health(),
             Boss::None => u8::MAX,
-        };
+        }
     }
 
     fn read_ripto_health(&self) -> u8 {
@@ -120,7 +120,7 @@ impl<'a> Memory<'a> {
 
         timer::set_variable("ripto_health", &ripto_health.to_string());
 
-        return ripto_health;
+        ripto_health
     }
 
     fn read_sorceress_lair_health(&self) -> u8 {
@@ -131,7 +131,7 @@ impl<'a> Memory<'a> {
 
         timer::set_variable("sorceress_lair_health", &sorceress_lair_health.to_string());
 
-        return sorceress_lair_health;
+        sorceress_lair_health
     }
 
     fn read_raw<T: Pod>(&self, path: &[u64]) -> Option<T> {
@@ -142,7 +142,7 @@ impl<'a> Memory<'a> {
             return Some(data);
         }
 
-        return None;
+        None
     }
 
     fn read_raw_or_default<T: Pod>(&self, path: &[u64], default: T) -> T {
@@ -150,6 +150,6 @@ impl<'a> Memory<'a> {
             return data;
         }
 
-        return default;
+        default
     }
 }
