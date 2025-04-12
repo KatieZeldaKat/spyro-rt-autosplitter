@@ -336,7 +336,7 @@ impl Settings {
 
     pub fn boss_should_split(&self, boss: Boss, has_split: &HashSet<Boss>) -> bool {
         match self.split_on_boss_kill(boss) {
-            Split::FirstTime => has_split.contains(&boss),
+            Split::FirstTime => !has_split.contains(&boss),
             Split::EveryTime => true,
             Split::Never => false,
         }
