@@ -103,10 +103,11 @@ async fn gain_control(memory: &Memory<'_>) {
 async fn run_game(memory: &Memory<'_>, settings: &Settings) {
     // Maps
     let mut map_watcher = Watcher::<String>::new();
-    let mut has_split = HashSet::<String>::new();
+    let mut map_has_split = HashSet::<String>::new();
 
     // Bosses
     let mut boss = Boss::None;
+    let mut boss_has_split = HashSet::<Boss>::new();
     let mut boss_health_watcher = Watcher::<u8>::new();
 
     while timer_running() {
@@ -136,13 +137,13 @@ async fn run_game(memory: &Memory<'_>, settings: &Settings) {
             let map = map_watcher.update_infallible(current_map);
             if map.changed() {
                 // Split on map change
-                if settings.should_split(map, &mut has_split) {
+                if settings.map_should_split(map, &mut map_has_split) {
                     timer::split();
                 }
 
                 // Update current boss
                 boss = memory.read_boss();
-                if !settings.split_on_boss_kill(boss) {
+                if !settings.boss_should_split(boss, &boss_has_split) {
                     boss = Boss::None;
                 }
             }
@@ -157,6 +158,7 @@ async fn run_game(memory: &Memory<'_>, settings: &Settings) {
                     .changed_from_to(&1, &0)
                 {
                     timer::split();
+                    boss_has_split.insert(boss);
                 }
             }
         }

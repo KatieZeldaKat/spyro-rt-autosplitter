@@ -126,8 +126,7 @@ pub struct Settings {
     _title_s2: Title,
 
     /// Split on Ripto Kill
-    #[default = true]
-    s2_ripto_kill: bool,
+    s2_ripto_kill: Split,
 
     /// Split on Exit
     #[heading_level = 1]
@@ -216,8 +215,7 @@ pub struct Settings {
     _title_s3: Title,
 
     /// Split on Sorceress Lair Kill
-    #[default = true]
-    s3_sorceress_lair_kill: bool,
+    s3_sorceress_lair_kill: Split,
 
     /// Split on Exit
     #[heading_level = 1]
@@ -324,7 +322,7 @@ pub struct Settings {
 }
 
 impl Settings {
-    pub fn should_split(&self, map: &Pair<String>, has_split: &mut HashSet<String>) -> bool {
+    pub fn map_should_split(&self, map: &Pair<String>, has_split: &mut HashSet<String>) -> bool {
         if Settings::is_valid_map_transition(map) {
             return match self.split_on_map_exit(&map.old) {
                 Split::FirstTime => has_split.insert(map.old.clone()),
@@ -336,11 +334,11 @@ impl Settings {
         false
     }
 
-    pub fn split_on_boss_kill(&self, boss: Boss) -> bool {
-        match boss {
-            Boss::Ripto => self.s2_ripto_kill,
-            Boss::SorceressLair => self.s3_sorceress_lair_kill,
-            Boss::None => false,
+    pub fn boss_should_split(&self, boss: Boss, has_split: &HashSet<Boss>) -> bool {
+        match self.split_on_boss_kill(boss) {
+            Split::FirstTime => has_split.contains(&boss),
+            Split::EveryTime => true,
+            Split::Never => false,
         }
     }
 
@@ -435,6 +433,14 @@ impl Settings {
             "/LS336_BugbotFactory/Maps/" => self.s3_bugbot_factory,
             "/LS337_SuperBonusRound/Maps/" => self.s3_super_bonus,
             _ => Split::Never,
+        }
+    }
+
+    fn split_on_boss_kill(&self, boss: Boss) -> Split {
+        match boss {
+            Boss::Ripto => self.s2_ripto_kill,
+            Boss::SorceressLair => self.s3_sorceress_lair_kill,
+            Boss::None => Split::Never,
         }
     }
 

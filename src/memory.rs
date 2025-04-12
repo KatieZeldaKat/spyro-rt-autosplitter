@@ -1,7 +1,7 @@
 use asr::{Address, PointerSize, Process, string::ArrayWString, timer};
 use bytemuck::Pod;
 
-#[derive(Clone, Copy)]
+#[derive(Eq, Hash, PartialEq, Clone, Copy)]
 pub enum Boss {
     Ripto,
     SorceressLair,
