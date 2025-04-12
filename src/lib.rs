@@ -1,12 +1,17 @@
 mod memory;
 mod settings;
 
-use std::collections::HashSet;
+use asr::{
+    future::next_tick,
+    print_message,
+    settings::Gui,
+    timer::{self, TimerState},
+    watcher::Watcher,
+    Process,
+};
 use memory::{Boss, Memory};
 use settings::Settings;
-use asr::{
-    future::next_tick, print_message, settings::Gui, timer::{self, TimerState}, watcher::Watcher, Process
-};
+use std::collections::HashSet;
 
 asr::async_main!(stable);
 
@@ -16,7 +21,7 @@ macro_rules! return_if_timer_reset_after {
         if (!timer_running()) {
             return;
         }
-    }
+    };
 }
 
 const EXE: &str = "Spyro-Win64-Shipping.exe";
@@ -29,17 +34,19 @@ async fn main() {
 
     loop {
         let process = Process::wait_attach(EXE).await;
-        process.until_closes(async {
-            if let Ok(address) = process.get_module_address(EXE) {
-                // init
-                detect_game_version(&process);
-                let memory = Memory::new(&process, address);
+        process
+            .until_closes(async {
+                if let Ok(address) = process.get_module_address(EXE) {
+                    // init
+                    detect_game_version(&process);
+                    let memory = Memory::new(&process, address);
 
-                loop {
-                    run(&memory, &mut settings).await;
+                    loop {
+                        run(&memory, &mut settings).await;
+                    }
                 }
-            }
-        }).await;
+            })
+            .await;
 
         if settings.reset_on_close {
             timer::reset();
@@ -47,7 +54,7 @@ async fn main() {
     }
 }
 
-async fn run<'a>(memory: &Memory::<'a>, settings: &mut Settings) {
+async fn run<'a>(memory: &Memory<'a>, settings: &mut Settings) {
     let mut games_started = HashSet::<u8>::new();
 
     loop {
@@ -66,14 +73,16 @@ async fn run<'a>(memory: &Memory::<'a>, settings: &mut Settings) {
     }
 }
 
-async fn select_game<'a>(memory: &Memory::<'a>) {
+async fn select_game<'a>(memory: &Memory<'a>) {
     let is_mid_run = timer_running();
     let mut in_game = Watcher::<bool>::new();
-    while !in_game.update_infallible(memory.read_in_game()).changed_to(&true) {
+    while !in_game
+        .update_infallible(memory.read_in_game())
+        .changed_to(&true)
+    {
         if is_mid_run {
             return_if_timer_reset_after!(next_tick().await);
-        }
-        else {
+        } else {
             next_tick().await;
         }
     }
@@ -81,7 +90,7 @@ async fn select_game<'a>(memory: &Memory::<'a>) {
     timer::start();
 }
 
-async fn gain_control<'a>(memory: &Memory::<'a>) {
+async fn gain_control<'a>(memory: &Memory<'a>) {
     timer::pause_game_time();
 
     while !memory.read_in_control() {
@@ -91,7 +100,7 @@ async fn gain_control<'a>(memory: &Memory::<'a>) {
     timer::resume_game_time();
 }
 
-async fn run_game<'a>(memory: &Memory::<'a>, settings: &Settings) {
+async fn run_game<'a>(memory: &Memory<'a>, settings: &Settings) {
     // Maps
     let mut map_watcher = Watcher::<String>::new();
     let mut has_split = HashSet::<String>::new();
@@ -118,8 +127,7 @@ async fn run_game<'a>(memory: &Memory::<'a>, settings: &Settings) {
         // in_menu check prevents abuse of buffering loading and pausing in the exact same frame
         if !is_loading || in_menu || !in_game {
             timer::resume_game_time();
-        }
-        else if is_loading {
+        } else if is_loading {
             timer::pause_game_time();
         }
 
@@ -142,11 +150,12 @@ async fn run_game<'a>(memory: &Memory::<'a>, settings: &Settings) {
 
         // Automatically split on boss kill
         match boss {
-            Boss::None => {},
+            Boss::None => {}
             _ => {
-                let current_boss_health = memory.read_boss_health(boss);
-                let boss_health = boss_health_watcher.update_infallible(current_boss_health);
-                if boss_health.changed_from_to(&1, &0) {
+                if boss_health_watcher
+                    .update_infallible(memory.read_boss_health(boss))
+                    .changed_from_to(&1, &0)
+                {
                     timer::split();
                 }
             }
@@ -163,11 +172,9 @@ fn timer_running() -> bool {
 fn detect_game_version(process: &Process) {
     if process.get_module_size(EXE).unwrap() == 61046784 {
         print_message("Spyro Reignited Trilogy WASM started (game version detected: Windows)");
-    }
-    else if process.get_module_size(EXE).unwrap() == 1052672 {
+    } else if process.get_module_size(EXE).unwrap() == 1052672 {
         print_message("Spyro Reignited Trilogy WASM started (game version detected: Linux)");
-    }
-    else {
+    } else {
         print_message("Spyro Reignited Trilogy WASM started (unknown game version)");
         print_message(&process.get_module_size(EXE).unwrap().to_string());
     }

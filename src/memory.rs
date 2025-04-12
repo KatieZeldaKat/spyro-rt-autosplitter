@@ -16,23 +16,20 @@ pub struct Memory<'a> {
 
 impl<'a> Memory<'a> {
     pub fn new(process: &'a Process, address: Address) -> Self {
-        return Self {
-            process,
-            address,
-        };
+        return Self { process, address };
     }
 
     pub fn read_map(&self) -> Option<String> {
         let path = &[0x03415F30, 0x138, 0xB0, 0xB0, 0x598, 0x210, 0xB8, 0x148, 0x190, 0x0];
-        if let Some(map_raw) = self.read_raw::<ArrayWString::<256>>(path) {
+        if let Some(map_raw) = self.read_raw::<ArrayWString<256>>(path) {
             // String that looks like a folder path (i.e. "/LS102_StoneHill/Maps/")
             let map = String::from_utf16(map_raw.as_slice()).unwrap();
 
             timer::set_variable("map", &map);
-    
+
             return Some(map);
         }
-        
+
         return None;
     }
 
@@ -112,7 +109,7 @@ impl<'a> Memory<'a> {
             Boss::Ripto => self.read_ripto_health(),
             Boss::SorceressLair => self.read_sorceress_lair_health(),
             Boss::None => u8::MAX,
-        }
+        };
     }
 
     fn read_ripto_health(&self) -> u8 {
@@ -138,11 +135,10 @@ impl<'a> Memory<'a> {
     }
 
     fn read_raw<T: Pod>(&self, path: &[u64]) -> Option<T> {
-        if let Ok(data) = self.process.read_pointer_path::<T>(
-            self.address,
-            PointerSize::Bit64,
-            path,
-        ) {
+        if let Ok(data) =
+            self.process
+                .read_pointer_path::<T>(self.address, PointerSize::Bit64, path)
+        {
             return Some(data);
         }
 

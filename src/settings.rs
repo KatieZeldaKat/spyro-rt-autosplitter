@@ -1,8 +1,9 @@
-use std::collections::HashSet;
-
-use asr::{settings::gui::{Gui, Title}, watcher::Pair};
-
 use crate::memory::Boss;
+use asr::{
+    settings::gui::{Gui, Title},
+    watcher::Pair,
+};
+use std::collections::HashSet;
 
 #[derive(Gui, Clone, Copy)]
 enum Split {
@@ -329,7 +330,7 @@ impl Settings {
                 Split::FirstTime => has_split.insert(map.old.clone()),
                 Split::EveryTime => true,
                 Split::Never => false,
-            }
+            };
         }
 
         return false;
