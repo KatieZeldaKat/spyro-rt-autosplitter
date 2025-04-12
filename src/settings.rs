@@ -1,7 +1,11 @@
-use asr::settings::gui::{Gui, Title};
+use std::collections::HashSet;
+
+use asr::{settings::gui::{Gui, Title}, watcher::Pair};
+
+use crate::memory::Boss;
 
 #[derive(Gui, Clone, Copy)]
-pub enum Split {
+enum Split {
     FirstTime,
     EveryTime,
     Never,
@@ -122,7 +126,7 @@ pub struct Settings {
 
     /// Split on Ripto Kill
     #[default = true]
-    pub s2_ripto_kill: bool,
+    s2_ripto_kill: bool,
 
     /// Split on Exit
     #[heading_level = 1]
@@ -212,7 +216,7 @@ pub struct Settings {
 
     /// Split on Sorceress Lair Kill
     #[default = true]
-    pub s3_sorceress_lair_kill: bool,
+    s3_sorceress_lair_kill: bool,
 
     /// Split on Exit
     #[heading_level = 1]
@@ -319,7 +323,27 @@ pub struct Settings {
 }
 
 impl Settings {
-    pub fn get_map_split_setting(&self, map: &str) -> Split {
+    pub fn should_split(&self, map: &Pair<String>, has_split: &mut HashSet<String>) -> bool {
+        if Settings::is_valid_map_transition(&map) {
+            return match self.split_on_map_exit(&map.old) {
+                Split::FirstTime => has_split.insert(map.old.clone()),
+                Split::EveryTime => true,
+                Split::Never => false,
+            }
+        }
+
+        return false;
+    }
+
+    pub fn split_on_boss_kill(&self, boss: Boss) -> bool {
+        return match boss {
+            Boss::Ripto => self.s2_ripto_kill,
+            Boss::SorceressLair => self.s3_sorceress_lair_kill,
+            Boss::None => false,
+        };
+    }
+
+    fn split_on_map_exit(&self, map: &str) -> Split {
         match map {
             "/LS102_StoneHill/Maps/" => self.s1_stone_hill,
             "/LS103_DarkHollow/Maps/" => self.s1_dark_hollow,
@@ -410,6 +434,15 @@ impl Settings {
             "/LS336_BugbotFactory/Maps/" => self.s3_bugbot_factory,
             "/LS337_SuperBonusRound/Maps/" => self.s3_super_bonus,
             _ => Split::Never,
+        }
+    }
+
+    fn is_valid_map_transition(map: &Pair<String>) -> bool {
+        match &map.old as &str {
+            "/LS208_CrushsDungeon/Maps/" => return "/LS210_AutumnPlains_Home/Maps/" == map.current,
+            "/LS219_GulpsOverlook/Maps/" => return "/LS222_WinterTundra_Home/Maps/" == map.current,
+            "/LS227_RiptosArena/Maps/" => return "/LS229_DragonShores/Maps/" == map.current,
+            _ => return true,
         }
     }
 }

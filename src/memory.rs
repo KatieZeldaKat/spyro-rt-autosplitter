@@ -1,6 +1,14 @@
 use asr::{string::ArrayWString, timer, Address, PointerSize, Process};
 use bytemuck::Pod;
 
+#[derive(Clone, Copy)]
+pub enum Boss {
+    Ripto,
+    SorceressLair,
+    //SorceressSBR,
+    None,
+}
+
 pub struct Memory<'a> {
     process: &'a Process,
     address: Address,
@@ -87,7 +95,27 @@ impl<'a> Memory<'a> {
         return game;
     }
 
-    pub fn read_ripto_health(&self) -> u8 {
+    pub fn read_boss(&self) -> Boss {
+        if let Some(map) = self.read_map() {
+            return match &map as &str {
+                "/LS227_RiptosArena/Maps/" => Boss::Ripto,
+                "/LS335_SorceressLair/Maps/" => Boss::SorceressLair,
+                _ => Boss::None,
+            };
+        }
+
+        return Boss::None;
+    }
+
+    pub fn read_boss_health(&self, boss: Boss) -> u8 {
+        return match boss {
+            Boss::Ripto => self.read_ripto_health(),
+            Boss::SorceressLair => self.read_sorceress_lair_health(),
+            Boss::None => u8::MAX,
+        }
+    }
+
+    fn read_ripto_health(&self) -> u8 {
         let path = &[0x03415F30, 0x110, 0x50, 0x140, 0x8, 0x1D0, 0x134];
 
         // Set to 8 at beginning of fight, decreases towards 0 as damage is taken in 3rd phase
@@ -98,7 +126,7 @@ impl<'a> Memory<'a> {
         return ripto_health;
     }
 
-    pub fn read_sorceress_lair_health(&self) -> u8 {
+    fn read_sorceress_lair_health(&self) -> u8 {
         let path = &[0x03601278, 0x40, 0x58, 0x20, 0xB0, 0x90, 0x140, 0xA28];
 
         // Set to 10 at beginning of fight, decreases towards 0 as damage is taken

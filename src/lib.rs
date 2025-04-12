@@ -2,13 +2,22 @@ mod memory;
 mod settings;
 
 use std::collections::HashSet;
-use memory::Memory;
-use settings::{Settings, Split};
+use memory::{Boss, Memory};
+use settings::Settings;
 use asr::{
-    future::next_tick, print_message, settings::Gui, timer::{self, TimerState}, watcher::{Pair, Watcher}, Process
+    future::next_tick, print_message, settings::Gui, timer::{self, TimerState}, watcher::Watcher, Process
 };
 
 asr::async_main!(stable);
+
+macro_rules! return_if_timer_reset_after {
+    ($expression:expr) => {
+        $expression;
+        if (!timer_running()) {
+            return;
+        }
+    }
+}
 
 const EXE: &str = "Spyro-Win64-Shipping.exe";
 const TICK_RATE: i32 = 30;
@@ -27,7 +36,7 @@ async fn main() {
                 let memory = Memory::new(&process, address);
 
                 loop {
-                    start_run(&memory, &mut settings).await;
+                    run(&memory, &mut settings).await;
                 }
             }
         }).await;
@@ -38,58 +47,60 @@ async fn main() {
     }
 }
 
-async fn start_run<'a>(memory: &Memory::<'a>, settings: &mut Settings) {
+async fn run<'a>(memory: &Memory::<'a>, settings: &mut Settings) {
     let mut games_started = HashSet::<u8>::new();
 
     loop {
-        // Wait until a game is selected
-        let timer_was_running = timer_running();
-        let mut in_game = Watcher::<bool>::new();
-        while !in_game.update_infallible(memory.read_in_game()).changed_to(&true) {
-            if timer_was_running && !timer_running() {
-                return;
-            }
-            next_tick().await;
-        }
+        return_if_timer_reset_after!(select_game(&memory).await);
 
-        // If it wasn't yet selected this run, wait until the player has control to start time
+        // Only if we haven't entered this game yet should we wait to gain control
         if games_started.insert(memory.read_game()) {
-            timer::start();
-            timer::pause_game_time();
-
-            // Wait to gain control
-            while !memory.read_in_control() {
-                next_tick().await;
-            }
-            if !timer_running() {
-                return;
-            }
+            return_if_timer_reset_after!(gain_control(&memory).await);
         }
-
-        timer::resume_game_time();
 
         // Update settings; assumes no settings are modified mid-game
         settings.update();
 
-        // Main autosplitter logic
-        continue_run(&memory, &settings).await;
-        if !timer_running() {
-            return;
-        }
-
+        return_if_timer_reset_after!(run_game(&memory, &settings).await);
         timer::resume_game_time();
     }
 }
 
-async fn continue_run<'a>(memory: &Memory::<'a>, settings: &Settings) {
+async fn select_game<'a>(memory: &Memory::<'a>) {
+    let is_mid_run = timer_running();
+    let mut in_game = Watcher::<bool>::new();
+    while !in_game.update_infallible(memory.read_in_game()).changed_to(&true) {
+        if is_mid_run {
+            return_if_timer_reset_after!(next_tick().await);
+        }
+        else {
+            next_tick().await;
+        }
+    }
+
+    timer::start();
+}
+
+async fn gain_control<'a>(memory: &Memory::<'a>) {
+    timer::pause_game_time();
+
+    while !memory.read_in_control() {
+        return_if_timer_reset_after!(next_tick().await);
+    }
+
+    timer::resume_game_time();
+}
+
+async fn run_game<'a>(memory: &Memory::<'a>, settings: &Settings) {
     // Maps
     let mut map_watcher = Watcher::<String>::new();
     let mut has_split = HashSet::<String>::new();
 
     // Bosses
-    let mut boss_watcher = Watcher::<u8>::new();
+    let mut boss = Boss::None;
+    let mut boss_health_watcher = Watcher::<u8>::new();
 
-    while timer::state() == TimerState::Running || timer::state() == TimerState::Paused {
+    while timer_running() {
         // If no longer in game, exit
         let in_game = memory.read_in_game();
         if !in_game {
@@ -112,41 +123,41 @@ async fn continue_run<'a>(memory: &Memory::<'a>, settings: &Settings) {
             timer::pause_game_time();
         }
 
-        // Automatically split on map change
+        // Detect map changes
         if let Some(current_map) = memory.read_map() {
             let map = map_watcher.update_infallible(current_map);
-            if map.changed() && is_valid_map_transition(&map) {
-                match settings.get_map_split_setting(&map.old) {
-                    Split::FirstTime => if has_split.insert(map.old.clone()) {
-                        timer::split();
-                    },
-                    Split::EveryTime => {
-                        timer::split();
-                    },
-                    Split::Never => {},
-                };
-            }
+            if map.changed() {
+                // Split on map change
+                if settings.should_split(&map, &mut has_split) {
+                    timer::split();
+                }
 
-            // Split on kill for boss fights
-            match &map.current as &str {
-                "/LS227_RiptosArena/Maps/" => {
-                    let health = memory.read_ripto_health();
-                    if boss_killed(&mut boss_watcher, health) && settings.s2_ripto_kill {
-                        timer::split();
-                    }
-                },
-                "/LS335_SorceressLair/Maps/" => {
-                    let health = memory.read_sorceress_lair_health();
-                    if boss_killed(&mut boss_watcher, health) && settings.s3_sorceress_lair_kill {
-                        timer::split();
-                    }
-                },
-                _ => {}
+                // Update current boss
+                boss = memory.read_boss();
+                if !settings.split_on_boss_kill(boss) {
+                    boss = Boss::None;
+                }
+            }
+        }
+
+        // Automatically split on boss kill
+        match boss {
+            Boss::None => {},
+            _ => {
+                let current_boss_health = memory.read_boss_health(boss);
+                let boss_health = boss_health_watcher.update_infallible(current_boss_health);
+                if boss_health.changed_from_to(&1, &0) {
+                    timer::split();
+                }
             }
         }
 
         next_tick().await;
     }
+}
+
+fn timer_running() -> bool {
+    return timer::state() == TimerState::Running || timer::state() == TimerState::Paused;
 }
 
 fn detect_game_version(process: &Process) {
@@ -160,22 +171,4 @@ fn detect_game_version(process: &Process) {
         print_message("Spyro Reignited Trilogy WASM started (unknown game version)");
         print_message(&process.get_module_size(EXE).unwrap().to_string());
     }
-}
-
-fn timer_running() -> bool {
-    return timer::state() == TimerState::Running || timer::state() == TimerState::Paused;
-}
-
-fn is_valid_map_transition(map: &Pair<String>) -> bool {
-    match &map.old as &str {
-        "/LS208_CrushsDungeon/Maps/" => return "/LS210_AutumnPlains_Home/Maps/" == map.current,
-        "/LS219_GulpsOverlook/Maps/" => return "/LS222_WinterTundra_Home/Maps/" == map.current,
-        "/LS227_RiptosArena/Maps/" => return "/LS229_DragonShores/Maps/" == map.current,
-        _ => return true,
-    }
-}
-
-fn boss_killed(boss_watcher: &mut Watcher<u8>, current_health: u8) -> bool {
-    let health = boss_watcher.update_infallible(current_health);
-    return health.changed_from_to(&1, &0);
 }
