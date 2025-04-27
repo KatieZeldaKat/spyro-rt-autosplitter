@@ -323,15 +323,15 @@ pub struct Settings {
 
 impl Settings {
     pub fn map_should_split(&self, map: &Pair<String>, has_split: &mut HashSet<String>) -> bool {
-        if Settings::is_valid_map_transition(map) {
-            return match self.split_on_map_exit(&map.old) {
-                Split::FirstTime => has_split.insert(map.old.clone()),
-                Split::EveryTime => true,
-                Split::Never => false,
-            };
+        if !Settings::is_valid_map_transition(map) {
+            return false;
         }
 
-        false
+        match self.split_on_map_exit(&map.old) {
+            Split::FirstTime => has_split.insert(map.old.clone()),
+            Split::EveryTime => true,
+            Split::Never => false,
+        }
     }
 
     pub fn boss_should_split(&self, boss: Boss, has_split: &HashSet<Boss>) -> bool {
@@ -440,16 +440,16 @@ impl Settings {
         match boss {
             Boss::Ripto => self.s2_ripto_kill,
             Boss::SorceressLair => self.s3_sorceress_lair_kill,
-            Boss::None => Split::Never,
         }
     }
 
     fn is_valid_map_transition(map: &Pair<String>) -> bool {
-        match &map.old as &str {
-            "/LS208_CrushsDungeon/Maps/" => "/LS210_AutumnPlains_Home/Maps/" == map.current,
-            "/LS219_GulpsOverlook/Maps/" => "/LS222_WinterTundra_Home/Maps/" == map.current,
-            "/LS227_RiptosArena/Maps/" => "/LS229_DragonShores/Maps/" == map.current,
-            _ => true,
-        }
+        map.current
+            == match &map.old as &str {
+                "/LS208_CrushsDungeon/Maps/" => "/LS210_AutumnPlains_Home/Maps/",
+                "/LS219_GulpsOverlook/Maps/" => "/LS222_WinterTundra_Home/Maps/",
+                "/LS227_RiptosArena/Maps/" => "/LS229_DragonShores/Maps/",
+                _ => &map.current,
+            }
     }
 }

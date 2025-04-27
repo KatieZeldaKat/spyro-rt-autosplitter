@@ -106,7 +106,7 @@ async fn run_game(memory: &Memory<'_>, settings: &Settings) {
     let mut map_has_split = HashSet::<String>::new();
 
     // Bosses
-    let mut boss = Boss::None;
+    let mut boss: Option<Boss> = None;
     let mut boss_has_split = HashSet::<Boss>::new();
     let mut boss_health_watcher = Watcher::<u8>::new();
 
@@ -141,25 +141,21 @@ async fn run_game(memory: &Memory<'_>, settings: &Settings) {
                     timer::split();
                 }
 
-                // Update current boss
-                boss = memory.read_boss();
-                if !settings.boss_should_split(boss, &boss_has_split) {
-                    boss = Boss::None;
-                }
+                // Update current boss, setting to None if split shouldn't occur
+                boss = memory
+                    .read_boss()
+                    .filter(|boss| settings.boss_should_split(*boss, &boss_has_split));
             }
         }
 
         // Automatically split on boss kill
-        match boss {
-            Boss::None => {}
-            _ => {
-                if boss_health_watcher
-                    .update_infallible(memory.read_boss_health(boss))
-                    .changed_from_to(&1, &0)
-                {
-                    timer::split();
-                    boss_has_split.insert(boss);
-                }
+        if let Some(boss) = boss {
+            if boss_health_watcher
+                .update_infallible(memory.read_boss_health(boss))
+                .changed_from_to(&1, &0)
+            {
+                timer::split();
+                boss_has_split.insert(boss);
             }
         }
 
@@ -172,12 +168,19 @@ fn timer_running() -> bool {
 }
 
 fn detect_game_version(process: &Process) {
-    if process.get_module_size(EXE).unwrap() == 61046784 {
-        print_message("Spyro Reignited Trilogy WASM started (game version detected: Windows)");
-    } else if process.get_module_size(EXE).unwrap() == 1052672 {
-        print_message("Spyro Reignited Trilogy WASM started (game version detected: Linux)");
-    } else {
-        print_message("Spyro Reignited Trilogy WASM started (unknown game version)");
-        print_message(&process.get_module_size(EXE).unwrap().to_string());
+    match process
+        .get_module_size(EXE)
+        .expect("Executable is running.")
+    {
+        61046784 => {
+            print_message("Spyro Reignited Trilogy WASM started (game version detected: Windows)");
+        }
+        1052672 => {
+            print_message("Spyro Reignited Trilogy WASM started (game version detected: Linux)");
+        }
+        size => {
+            print_message("Spyro Reignited Trilogy WASM started (unknown game version)");
+            print_message(&format!("Module size found: {}", &size.to_string()));
+        }
     }
 }
