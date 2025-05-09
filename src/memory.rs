@@ -2,10 +2,26 @@ use asr::{Address, PointerSize, Process, string::ArrayWString, timer};
 use bytemuck::Pod;
 
 #[derive(Eq, Hash, PartialEq, Clone, Copy)]
+pub enum Game {
+    Spyro1,
+    Spyro2,
+    Spyro3,
+}
+
+#[derive(Eq, Hash, PartialEq, Clone, Copy)]
 pub enum Boss {
-    Ripto,
-    SorceressLair,
-    //SorceressSBR,
+    Ripto(u8),
+    SorceressLair(u8),
+    //SorceressSBR(u8),
+}
+
+impl Boss {
+    pub fn health(&self) -> u8 {
+        match *self {
+            Boss::Ripto(health) => health,
+            Boss::SorceressLair(health) => health,
+        }
+    }
 }
 
 pub struct Memory<'a> {
@@ -74,7 +90,7 @@ impl<'a> Memory<'a> {
         in_control
     }
 
-    pub fn read_game(&self) -> u8 {
+    pub fn read_game(&self) -> Option<Game> {
         let path = &[0x03415F30, 0xF8, 0x290, 0x0, 0x1F8];
 
         // Set to 0 in title screen, 1-3 corresponding to Spyro 1-3
@@ -82,21 +98,21 @@ impl<'a> Memory<'a> {
 
         timer::set_variable("game", &game.to_string());
 
-        game
-    }
-
-    pub fn read_boss(&self) -> Option<Boss> {
-        match &self.read_map().unwrap_or_default() as &str {
-            "/LS227_RiptosArena/Maps/" => Some(Boss::Ripto),
-            "/LS335_SorceressLair/Maps/" => Some(Boss::SorceressLair),
+        match game {
+            1 => Some(Game::Spyro1),
+            2 => Some(Game::Spyro2),
+            3 => Some(Game::Spyro3),
             _ => None,
         }
     }
 
-    pub fn read_boss_health(&self, boss: Boss) -> u8 {
-        match boss {
-            Boss::Ripto => self.read_ripto_health(),
-            Boss::SorceressLair => self.read_sorceress_lair_health(),
+    pub fn read_boss(&self) -> Option<Boss> {
+        match &self.read_map().unwrap_or_default() as &str {
+            "/LS227_RiptosArena/Maps/" => Some(Boss::Ripto(self.read_ripto_health())),
+            "/LS335_SorceressLair/Maps/" => {
+                Some(Boss::SorceressLair(self.read_sorceress_lair_health()))
+            }
+            _ => None,
         }
     }
 

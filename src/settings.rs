@@ -1,12 +1,8 @@
 use crate::memory::Boss;
-use asr::{
-    settings::gui::{Gui, Title},
-    watcher::Pair,
-};
-use std::collections::HashSet;
+use asr::settings::gui::{Gui, Title};
 
 #[derive(Gui, Clone, Copy)]
-enum Split {
+pub enum Split {
     FirstTime,
     EveryTime,
     Never,
@@ -21,10 +17,6 @@ pub struct Settings {
     /// Reset timer on title screen
     #[default = false]
     pub reset_on_title: bool,
-
-    /// Reset timer when game closes
-    #[default = false]
-    pub reset_on_close: bool,
 
     /// Spyro 1
     #[heading_level = 0]
@@ -322,27 +314,7 @@ pub struct Settings {
 }
 
 impl Settings {
-    pub fn map_should_split(&self, map: &Pair<String>, has_split: &mut HashSet<String>) -> bool {
-        if !Settings::is_valid_map_transition(map) {
-            return false;
-        }
-
-        match self.split_on_map_exit(&map.old) {
-            Split::FirstTime => has_split.insert(map.old.clone()),
-            Split::EveryTime => true,
-            Split::Never => false,
-        }
-    }
-
-    pub fn boss_should_split(&self, boss: Boss, has_split: &HashSet<Boss>) -> bool {
-        match self.split_on_boss_kill(boss) {
-            Split::FirstTime => !has_split.contains(&boss),
-            Split::EveryTime => true,
-            Split::Never => false,
-        }
-    }
-
-    fn split_on_map_exit(&self, map: &str) -> Split {
+    pub fn split_on_map_exit(&self, map: &str) -> Split {
         match map {
             "/LS102_StoneHill/Maps/" => self.s1_stone_hill,
             "/LS103_DarkHollow/Maps/" => self.s1_dark_hollow,
@@ -436,20 +408,10 @@ impl Settings {
         }
     }
 
-    fn split_on_boss_kill(&self, boss: Boss) -> Split {
+    pub fn split_on_boss_kill(&self, boss: Boss) -> Split {
         match boss {
-            Boss::Ripto => self.s2_ripto_kill,
-            Boss::SorceressLair => self.s3_sorceress_lair_kill,
+            Boss::Ripto(_) => self.s2_ripto_kill,
+            Boss::SorceressLair(_) => self.s3_sorceress_lair_kill,
         }
-    }
-
-    fn is_valid_map_transition(map: &Pair<String>) -> bool {
-        map.current
-            == match &map.old as &str {
-                "/LS208_CrushsDungeon/Maps/" => "/LS210_AutumnPlains_Home/Maps/",
-                "/LS219_GulpsOverlook/Maps/" => "/LS222_WinterTundra_Home/Maps/",
-                "/LS227_RiptosArena/Maps/" => "/LS229_DragonShores/Maps/",
-                _ => &map.current,
-            }
     }
 }

@@ -1,177 +1,38 @@
+mod cache;
 mod memory;
 mod settings;
+mod splitter;
 
-use asr::{
-    Process,
-    future::next_tick,
-    print_message,
-    settings::Gui,
-    timer::{self, TimerState},
-    watcher::Watcher,
-};
-use memory::{Boss, Memory};
-use settings::Settings;
-use std::collections::HashSet;
+use asr::{Process, print_message};
+use splitter::Splitter;
 
 asr::async_main!(stable);
 
-macro_rules! return_if_timer_reset_after {
-    ($expression:expr) => {
-        $expression;
-        if (!timer_running()) {
-            return;
-        }
-    };
-}
-
 const EXE: &str = "Spyro-Win64-Shipping.exe";
-const TICK_RATE: i32 = 30;
+const TICK_RATE: u8 = 30;
 
 async fn main() {
-    // startup
     asr::set_tick_rate(f64::from(TICK_RATE));
-    let mut settings = Settings::register();
 
     loop {
         let process = Process::wait_attach(EXE).await;
         process
             .until_closes(async {
-                if let Ok(address) = process.get_module_address(EXE) {
-                    // init
-                    detect_game_version(&process);
-                    let memory = Memory::new(&process, address);
+                if let Ok((address, module_size)) = process.get_module_range(EXE) {
+                    detect_game_version(module_size);
 
+                    let mut splitter = Splitter::new(&process, address);
                     loop {
-                        run(&memory, &mut settings).await;
+                        splitter.run().await;
                     }
                 }
             })
             .await;
-
-        if settings.reset_on_close {
-            timer::reset();
-        }
     }
 }
 
-async fn run(memory: &Memory<'_>, settings: &mut Settings) {
-    let mut games_started = HashSet::<u8>::new();
-
-    loop {
-        return_if_timer_reset_after!(select_game(memory).await);
-
-        // Only if we haven't entered this game yet should we wait to gain control
-        if games_started.insert(memory.read_game()) {
-            return_if_timer_reset_after!(gain_control(memory).await);
-        }
-
-        // Update settings; assumes no settings are modified mid-game
-        settings.update();
-
-        return_if_timer_reset_after!(run_game(memory, settings).await);
-        timer::resume_game_time();
-    }
-}
-
-async fn select_game(memory: &Memory<'_>) {
-    let is_mid_run = timer_running();
-    let mut in_game = Watcher::<bool>::new();
-    while !in_game
-        .update_infallible(memory.read_in_game())
-        .changed_to(&true)
-    {
-        if is_mid_run {
-            return_if_timer_reset_after!(next_tick().await);
-        } else {
-            next_tick().await;
-        }
-    }
-
-    timer::start();
-}
-
-async fn gain_control(memory: &Memory<'_>) {
-    timer::pause_game_time();
-
-    while !memory.read_in_control() {
-        return_if_timer_reset_after!(next_tick().await);
-    }
-
-    timer::resume_game_time();
-}
-
-async fn run_game(memory: &Memory<'_>, settings: &Settings) {
-    // Maps
-    let mut map_watcher = Watcher::<String>::new();
-    let mut map_has_split = HashSet::<String>::new();
-
-    // Bosses
-    let mut boss: Option<Boss> = None;
-    let mut boss_has_split = HashSet::<Boss>::new();
-    let mut boss_health_watcher = Watcher::<u8>::new();
-
-    while timer_running() {
-        // If no longer in game, exit
-        let in_game = memory.read_in_game();
-        if !in_game {
-            if settings.reset_on_title {
-                timer::reset();
-            }
-
-            return;
-        }
-
-        // Read memory to determine game timer state
-        let is_loading = memory.read_is_loading();
-        let in_menu = memory.read_in_menu();
-
-        // in_menu check prevents abuse of buffering loading and pausing in the exact same frame
-        if !is_loading || in_menu || !in_game {
-            timer::resume_game_time();
-        } else if is_loading {
-            timer::pause_game_time();
-        }
-
-        // Detect map changes
-        if let Some(current_map) = memory.read_map() {
-            let map = map_watcher.update_infallible(current_map);
-            if map.changed() {
-                // Split on map change
-                if settings.map_should_split(map, &mut map_has_split) {
-                    timer::split();
-                }
-
-                // Update current boss, setting to None if split shouldn't occur
-                boss = memory
-                    .read_boss()
-                    .filter(|boss| settings.boss_should_split(*boss, &boss_has_split));
-            }
-        }
-
-        // Automatically split on boss kill
-        if let Some(boss) = boss {
-            if boss_health_watcher
-                .update_infallible(memory.read_boss_health(boss))
-                .changed_from_to(&1, &0)
-            {
-                timer::split();
-                boss_has_split.insert(boss);
-            }
-        }
-
-        next_tick().await;
-    }
-}
-
-fn timer_running() -> bool {
-    timer::state() == TimerState::Running || timer::state() == TimerState::Paused
-}
-
-fn detect_game_version(process: &Process) {
-    match process
-        .get_module_size(EXE)
-        .expect("Executable is running.")
-    {
+fn detect_game_version(module_size: u64) {
+    match module_size {
         61046784 => {
             print_message("Spyro Reignited Trilogy WASM started (game version detected: Windows)");
         }
