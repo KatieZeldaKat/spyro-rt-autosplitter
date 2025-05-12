@@ -8,7 +8,7 @@ use asr::{
 
 use crate::{
     cache::{Cache, Occurrence},
-    memory::Memory,
+    memory::{Game, Memory},
     settings::{Settings, Split},
 };
 
@@ -42,13 +42,7 @@ impl<'a> Splitter<'a> {
             return_if_timer_reset_after!(self.select_game().await);
 
             // Wait to gain control of Spyro if this is the first time we are starting this game
-            if let Occurrence::First(_) = loop {
-                if let Some(occurrence) = cache.game().started(&self.memory) {
-                    break occurrence;
-                }
-
-                next_tick().await;
-            } {
+            if let Occurrence::First(_) = self.start_game(&mut cache).await {
                 return_if_timer_reset_after!(self.gain_control().await);
             }
 
@@ -79,13 +73,28 @@ impl<'a> Splitter<'a> {
         }
 
         timer::start();
-        timer::pause_game_time();
+    }
+
+    async fn start_game(&self, cache: &mut Cache) -> Occurrence<Game> {
+        loop {
+            if let Some(occurrence) = cache.game().started(&self.memory) {
+                return occurrence;
+            }
+
+            // It's unknown whether we should pause game time; preemptively do so just in case
+            timer::pause_game_time();
+            next_tick().await;
+        }
     }
 
     async fn gain_control(&self) {
+        timer::pause_game_time();
+
         while !self.memory.read_in_control() {
             return_if_timer_reset_after!(next_tick().await);
         }
+
+        timer::resume_game_time();
     }
 
     async fn run_game(&self, cache: &mut Cache) {
