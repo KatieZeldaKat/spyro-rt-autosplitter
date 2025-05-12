@@ -113,34 +113,29 @@ impl<'a> Splitter<'a> {
 
             // Automatically split on map exit
             if let Some(occurrence) = cache.map().exited(&self.memory) {
-                match occurrence {
-                    Occurrence::First(map) => match self.settings.split_on_map_exit(&map) {
-                        Split::FirstTime | Split::EveryTime => timer::split(),
-                        Split::Never => (),
-                    },
-                    Occurrence::Additional(map) => match self.settings.split_on_map_exit(&map) {
-                        Split::EveryTime => timer::split(),
-                        Split::FirstTime | Split::Never => (),
-                    },
-                }
+                split_on_occurrence(occurrence, |map| self.settings.split_on_map_exit(&map));
             }
 
             // Automatically split on boss kill
             if let Some(occurrence) = cache.boss().killed(&self.memory) {
-                match occurrence {
-                    Occurrence::First(boss) => match self.settings.split_on_boss_kill(boss) {
-                        Split::FirstTime | Split::EveryTime => timer::split(),
-                        Split::Never => (),
-                    },
-                    Occurrence::Additional(boss) => match self.settings.split_on_boss_kill(boss) {
-                        Split::EveryTime => timer::split(),
-                        Split::FirstTime | Split::Never => (),
-                    },
-                }
+                split_on_occurrence(occurrence, |boss| self.settings.split_on_boss_kill(boss));
             }
 
             next_tick().await;
         }
+    }
+}
+
+fn split_on_occurrence<T: Clone, P: FnOnce(T) -> Split>(occurrence: Occurrence<T>, get_setting: P) {
+    match occurrence {
+        Occurrence::First(data) => match get_setting(data) {
+            Split::FirstTime | Split::EveryTime => timer::split(),
+            Split::Never => (),
+        },
+        Occurrence::Additional(data) => match get_setting(data) {
+            Split::EveryTime => timer::split(),
+            Split::FirstTime | Split::Never => (),
+        },
     }
 }
 
