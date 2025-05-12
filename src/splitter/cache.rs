@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use asr::watcher::{Pair, Watcher};
 
-use crate::memory::{Boss, Game, Memory};
+use super::memory::{Boss, Game, Memory};
 
 pub enum Occurrence<T: Clone> {
     First(T),

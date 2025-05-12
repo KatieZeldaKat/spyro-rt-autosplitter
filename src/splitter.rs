@@ -1,3 +1,7 @@
+mod cache;
+mod memory;
+mod settings;
+
 use asr::{
     Address, Process,
     future::next_tick,
@@ -6,11 +10,9 @@ use asr::{
     watcher::Watcher,
 };
 
-use crate::{
-    cache::{Cache, Occurrence},
-    memory::{Game, Memory},
-    settings::{Settings, Split},
-};
+use cache::{Cache, Occurrence};
+use memory::{Game, Memory};
+use settings::{Settings, Split};
 
 macro_rules! return_if_timer_reset_after {
     ($expression:expr) => {

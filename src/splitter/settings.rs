@@ -1,4 +1,4 @@
-use crate::memory::Boss;
+use super::memory::Boss;
 use asr::settings::gui::{Gui, Title};
 
 #[derive(Gui, Clone, Copy)]

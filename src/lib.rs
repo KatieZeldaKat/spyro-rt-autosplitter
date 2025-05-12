@@ -1,6 +1,3 @@
-mod cache;
-mod memory;
-mod settings;
 mod splitter;
 
 use asr::{Process, print_message};
