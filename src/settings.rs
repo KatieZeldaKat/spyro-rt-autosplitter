@@ -26,6 +26,9 @@ pub struct Settings {
     #[heading_level = 1]
     _title_s1_exit: Title,
 
+    /// Artisans
+    s1_artisans: Split,
+
     /// Stone Hill
     s1_stone_hill: Split,
 
@@ -40,6 +43,9 @@ pub struct Settings {
 
     /// Toasty
     s1_toasty: Split,
+
+    /// Peace Keepers
+    s1_peace_keepers: Split,
 
     /// Dry Canyon
     s1_dry_canyon: Split,
@@ -56,6 +62,9 @@ pub struct Settings {
     /// Doctor Shemp
     s1_doctor_shemp: Split,
 
+    /// Magic Crafters
+    s1_magic_crafters: Split,
+
     /// Alpine Ridge
     s1_alpine_ridge: Split,
 
@@ -71,6 +80,9 @@ pub struct Settings {
     /// Blowhard
     s1_blowhard: Split,
 
+    /// Beast Makers
+    s1_beast_makers: Split,
+
     /// Terrace Village
     s1_terrace_village: Split,
 
@@ -85,6 +97,9 @@ pub struct Settings {
 
     /// Metalhead
     s1_metalhead: Split,
+
+    /// Dream Weavers
+    s1_dream_weavers: Split,
 
     /// Dark Passage
     s1_dark_passage: Split,
@@ -316,26 +331,31 @@ pub struct Settings {
 impl Settings {
     pub fn split_on_map_exit(&self, map: &str) -> Split {
         match map {
+            "/LS101_ArtisansHome/Maps/" => self.s1_artisans,
             "/LS102_StoneHill/Maps/" => self.s1_stone_hill,
             "/LS103_DarkHollow/Maps/" => self.s1_dark_hollow,
             "/LS104_Townsquare/Maps/" => self.s1_town_square,
             "/LS105_Sunnyflight/Maps/" => self.s1_sunny_flight,
             "/LS106_Toasty/Maps/" => self.s1_toasty,
+            "/LS107_PeacekeeperHome/Maps/" => self.s1_peace_keepers,
             "/LS108_DryCanyon/Maps/" => self.s1_dry_canyon,
             "/LS109_CliffTown/Maps/" => self.s1_cliff_town,
             "/LS110_IceCavern/Maps/" => self.s1_ice_cavern,
             "/LS111_NightFlight/Maps/" => self.s1_night_flight,
             "/LS112_DrShemp/Maps/" => self.s1_doctor_shemp,
+            "/LS113_MagicHome/Maps/" => self.s1_magic_crafters,
             "/LS114_AlpineRidge/Maps/" => self.s1_alpine_ridge,
             "/LS115_HighCaves/Maps/" => self.s1_high_caves,
             "/LS116_WizardPeak/Maps/" => self.s1_wizard_peak,
             "/LS117_CrystalFlight/Maps/" => self.s1_crystal_flight,
             "/LS118_Blowhard/Maps/" => self.s1_blowhard,
+            "/LS119_BeastHome/Maps/" => self.s1_beast_makers,
             "/LS120_TerraceVillage/Maps/" => self.s1_terrace_village,
             "/LS121_MistyBog/Maps/" => self.s1_misty_bog,
             "/LS122_TreeTops/Maps/" => self.s1_tree_tops,
             "/LS123_WildFlight/Maps/" => self.s1_wild_flight,
             "/LS124_MetalHead/Maps/" => self.s1_metalhead,
+            "/LS125_DreamWeaverHome/Maps/" => self.s1_dream_weavers,
             "/LS126_DarkPassage/Maps/" => self.s1_dark_passage,
             "/LS127_LoftyCastle/Maps/" => self.s1_lofty_castle,
             "/LS128_HauntedTowers/Maps/" => self.s1_haunted_towers,

@@ -87,6 +87,11 @@ impl MapCache {
     fn is_valid_map_transition(map: &Pair<String>) -> bool {
         map.current
             == match &map.old as &str {
+                "/LS101_ArtisansHome/Maps/" => "/LS107_PeacekeeperHome/Maps/",
+                "/LS107_PeacekeeperHome/Maps/" => "/LS113_MagicHome/Maps/",
+                "/LS113_MagicHome/Maps/" => "/LS119_BeastHome/Maps/",
+                "/LS119_BeastHome/Maps/" => "/LS125_DreamWeaverHome/Maps/",
+                "/LS125_DreamWeaverHome/Maps/" => "/LS131_GnastyHome/Maps/",
                 "/LS208_CrushsDungeon/Maps/" => "/LS210_AutumnPlains_Home/Maps/",
                 "/LS219_GulpsOverlook/Maps/" => "/LS222_WinterTundra_Home/Maps/",
                 "/LS227_RiptosArena/Maps/" => "/LS229_DragonShores/Maps/",
