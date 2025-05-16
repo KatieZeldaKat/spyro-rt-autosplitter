@@ -1,7 +1,7 @@
 mod splitter;
 
-use asr::{Process, print_message};
-use splitter::Splitter;
+use asr::{Process, print_message, settings::Gui};
+use splitter::{Splitter, settings::Settings};
 
 asr::async_main!(stable);
 
@@ -10,6 +10,7 @@ const TICK_RATE: u8 = 30;
 
 async fn main() {
     asr::set_tick_rate(f64::from(TICK_RATE));
+    let mut settings = Settings::register();
 
     loop {
         let process = Process::wait_attach(EXE).await;
@@ -18,7 +19,7 @@ async fn main() {
                 if let Ok((address, module_size)) = process.get_module_range(EXE) {
                     detect_game_version(module_size);
 
-                    let mut splitter = Splitter::new(&process, address);
+                    let mut splitter = Splitter::new(&process, address, &mut settings);
                     loop {
                         splitter.run().await;
                     }

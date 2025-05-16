@@ -1,6 +1,6 @@
 mod cache;
 mod memory;
-mod settings;
+pub mod settings;
 
 use asr::{
     Address, Process,
@@ -25,14 +25,14 @@ macro_rules! return_if_timer_reset_after {
 
 pub struct Splitter<'a> {
     memory: Memory<'a>,
-    settings: Settings,
+    settings: &'a mut Settings,
 }
 
 impl<'a> Splitter<'a> {
-    pub fn new(process: &'a Process, address: Address) -> Self {
+    pub fn new(process: &'a Process, address: Address, settings: &'a mut Settings) -> Self {
         Self {
             memory: Memory::new(process, address),
-            settings: Settings::register(),
+            settings,
         }
     }
 
