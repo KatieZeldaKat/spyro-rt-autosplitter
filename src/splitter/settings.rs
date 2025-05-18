@@ -224,6 +224,9 @@ pub struct Settings {
     /// Split on Sorceress Lair Kill
     s3_sorceress_lair_kill: Split,
 
+    /// Split on Sorceress SBR Kill
+    s3_sorceress_sbr_kill: Split,
+
     /// Split on Exit
     #[heading_level = 1]
     _title_s3_exit: Title,
@@ -432,6 +435,7 @@ impl Settings {
         match boss {
             Boss::Ripto(_) => self.s2_ripto_kill,
             Boss::SorceressLair(_) => self.s3_sorceress_lair_kill,
+            Boss::SorceressSBR(_) => self.s3_sorceress_sbr_kill,
         }
     }
 }

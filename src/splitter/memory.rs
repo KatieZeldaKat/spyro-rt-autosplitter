@@ -12,7 +12,7 @@ pub enum Game {
 pub enum Boss {
     Ripto(u8),
     SorceressLair(u8),
-    //SorceressSBR(u8),
+    SorceressSBR(u8),
 }
 
 impl Boss {
@@ -20,6 +20,7 @@ impl Boss {
         match *self {
             Boss::Ripto(health) => health,
             Boss::SorceressLair(health) => health,
+            Boss::SorceressSBR(health) => health,
         }
     }
 }
@@ -112,6 +113,9 @@ impl<'a> Memory<'a> {
             "/LS335_SorceressLair/Maps/" => {
                 Some(Boss::SorceressLair(self.read_sorceress_lair_health()))
             }
+            "/LS337_SuperBonusRound/Maps/" => {
+                Some(Boss::SorceressSBR(self.read_sorceress_sbr_health()))
+            }
             _ => None,
         }
     }
@@ -136,6 +140,17 @@ impl<'a> Memory<'a> {
         timer::set_variable("sorceress_lair_health", &sorceress_lair_health.to_string());
 
         sorceress_lair_health
+    }
+
+    fn read_sorceress_sbr_health(&self) -> u8 {
+        let path = &[0x0341B1D0, 0xF8, 0x290, 0x50, 0x8A0, 0xB28];
+
+        // Set to 15 at beginning of fight, decreases towards 0 as damage is taken
+        let sorceress_sbr_health = self.read(path).unwrap_or(15);
+
+        timer::set_variable("sorceress_sbr_health", &sorceress_sbr_health.to_string());
+
+        sorceress_sbr_health
     }
 
     fn read<T: Pod>(&self, path: &[u64]) -> Option<T> {
