@@ -21,7 +21,7 @@ async fn main() {
 
                     let mut splitter = Splitter::new(&process, address, &mut settings);
                     loop {
-                        splitter.run().await;
+                        let _ = splitter.run().await;
                     }
                 }
             })

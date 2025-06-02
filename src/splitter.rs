@@ -3,8 +3,7 @@ mod memory;
 pub mod settings;
 
 use asr::{
-    Address, Process,
-    future::next_tick,
+    Address, Process, future,
     settings::Gui,
     timer::{self, TimerState},
     watcher::Watcher,
@@ -13,15 +12,6 @@ use asr::{
 use cache::{Cache, Occurrence};
 use memory::{Game, Memory};
 use settings::{Settings, Split};
-
-macro_rules! return_if_timer_reset_after {
-    ($expression:expr) => {
-        $expression;
-        if (!timer_running()) {
-            return;
-        }
-    };
-}
 
 pub struct Splitter<'a> {
     memory: Memory<'a>,
@@ -36,28 +26,28 @@ impl<'a> Splitter<'a> {
         }
     }
 
-    pub async fn run(&mut self) {
+    pub async fn run(&mut self) -> Result<(), TimerState> {
         let mut cache = Cache::new();
 
         loop {
             // Wait until we select a game in the title screen
-            return_if_timer_reset_after!(self.select_game().await);
+            self.select_game().await?;
 
             // Wait to gain control of Spyro if this is the first time we are starting this game
-            if let Occurrence::First(_) = self.start_game(&mut cache).await {
-                return_if_timer_reset_after!(self.gain_control().await);
+            if let Occurrence::First(_) = self.start_game(&mut cache).await? {
+                self.gain_control().await?;
             }
 
             // Update settings; assumes no settings are modified mid-game
             self.settings.update();
 
             // Run the current game
-            return_if_timer_reset_after!(self.run_game(&mut cache).await);
+            self.run_game(&mut cache).await?;
             timer::resume_game_time();
         }
     }
 
-    async fn select_game(&self) {
+    async fn select_game(&self) -> Result<(), TimerState> {
         let is_mid_run = timer_running();
 
         // We use a watcher to check that in_game *changes* to true rather than *is* true so
@@ -68,47 +58,53 @@ impl<'a> Splitter<'a> {
             .changed_to(&true)
         {
             if is_mid_run {
-                return_if_timer_reset_after!(next_tick().await);
+                next_tick().await?;
             } else {
-                next_tick().await;
+                let _ = next_tick().await;
             }
         }
 
         timer::start();
+
+        Ok(())
     }
 
-    async fn start_game(&self, cache: &mut Cache) -> Occurrence<Game> {
+    async fn start_game(&self, cache: &mut Cache) -> Result<Occurrence<Game>, TimerState> {
         loop {
             if let Some(occurrence) = cache.game().started(&self.memory) {
-                return occurrence;
+                return Ok(occurrence);
             }
 
             // It's unknown whether we should pause game time; preemptively do so just in case
             timer::pause_game_time();
-            next_tick().await;
+            next_tick().await?;
         }
     }
 
-    async fn gain_control(&self) {
+    async fn gain_control(&self) -> Result<(), TimerState> {
         timer::pause_game_time();
 
         while !self.memory.read_in_control() {
-            return_if_timer_reset_after!(next_tick().await);
+            next_tick().await?;
         }
 
         timer::resume_game_time();
+
+        Ok(())
     }
 
-    async fn run_game(&self, cache: &mut Cache) {
-        while timer_running() {
+    async fn run_game(&self, cache: &mut Cache) -> Result<(), TimerState> {
+        loop {
             // If no longer in game, exit
             let in_game = self.memory.read_in_game();
             if !in_game {
-                if self.settings.reset_on_title {
-                    timer::reset();
-                }
-
-                return;
+                return match self.settings.reset_on_title {
+                    true => {
+                        timer::reset();
+                        Err(timer::state())
+                    }
+                    false => Ok(()),
+                };
             }
 
             // Read memory to determine game timer state
@@ -132,8 +128,16 @@ impl<'a> Splitter<'a> {
                 split_on_occurrence(occurrence, |boss| self.settings.split_on_boss_kill(boss));
             }
 
-            next_tick().await;
+            next_tick().await?;
         }
+    }
+}
+
+async fn next_tick() -> Result<(), TimerState> {
+    future::next_tick().await;
+    match timer_running() {
+        true => Ok(()),
+        false => Err(timer::state()),
     }
 }
 
