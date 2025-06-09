@@ -124,7 +124,7 @@ impl<'a> Memory<'a> {
         let path = &[0x03415F30, 0x110, 0x50, 0x140, 0x8, 0x1D0, 0x134];
 
         // Set to 8 at beginning of fight, decreases towards 0 as damage is taken in 3rd phase
-        let ripto_health = self.read(path).unwrap_or(8);
+        let ripto_health = self.read(path).unwrap_or(u8::MAX);
 
         timer::set_variable("ripto_health", &ripto_health.to_string());
 
@@ -135,7 +135,7 @@ impl<'a> Memory<'a> {
         let path = &[0x03601278, 0x40, 0x58, 0x20, 0xB0, 0x90, 0x140, 0xA28];
 
         // Set to 10 at beginning of fight, decreases towards 0 as damage is taken
-        let sorceress_lair_health = self.read(path).unwrap_or(10);
+        let sorceress_lair_health = self.read(path).unwrap_or(u8::MAX);
 
         timer::set_variable("sorceress_lair_health", &sorceress_lair_health.to_string());
 
@@ -146,7 +146,7 @@ impl<'a> Memory<'a> {
         let path = &[0x0341B1D0, 0xF8, 0x290, 0x50, 0x8A0, 0xB28];
 
         // Set to 15 at beginning of fight, decreases towards 0 as damage is taken
-        let sorceress_sbr_health = self.read(path).unwrap_or(15);
+        let sorceress_sbr_health = self.read(path).unwrap_or(u8::MAX);
 
         timer::set_variable("sorceress_sbr_health", &sorceress_sbr_health.to_string());
 
