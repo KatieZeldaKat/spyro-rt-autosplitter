@@ -1,18 +1,36 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use asr::watcher::{Pair, Watcher};
 
 use super::memory::{Boss, Game, Memory};
+
+const DRAGON_CATEGORY_REQUIREMENT: u8 = 80;
+const ORB_CATEGORY_REQUIREMENT: u8 = 40;
+const EGG_CATEGORY_REQUIREMENT: u8 = 149;
 
 pub enum Occurrence<T: Clone> {
     First(T),
     Additional(T),
 }
 
+impl<T: Clone> Occurrence<T> {
+    pub fn data(&self) -> T {
+        match self {
+            Self::First(data) | Self::Additional(data) => data.clone(),
+        }
+    }
+}
+
+pub enum Collection {
+    Intermediate,
+    CategoryRequirement,
+}
+
 pub struct Cache {
     game: GameCache,
     map: MapCache,
     boss: BossCache,
+    collectables: CollectableCache,
 }
 
 impl Cache {
@@ -21,6 +39,7 @@ impl Cache {
             game: GameCache::new(),
             map: MapCache::new(),
             boss: BossCache::new(),
+            collectables: CollectableCache::new(),
         }
     }
 
@@ -34,6 +53,10 @@ impl Cache {
 
     pub fn boss(&mut self) -> &mut BossCache {
         &mut self.boss
+    }
+
+    pub fn collectables(&mut self) -> &mut CollectableCache {
+        &mut self.collectables
     }
 }
 
@@ -126,5 +149,41 @@ impl BossCache {
         }
 
         None
+    }
+}
+
+pub struct CollectableCache {
+    collectables: HashMap<Game, Watcher<u8>>,
+}
+
+impl CollectableCache {
+    pub fn new() -> Self {
+        Self {
+            collectables: HashMap::new(),
+        }
+    }
+
+    pub fn collected(&mut self, game: Game, memory: &Memory) -> Option<Collection> {
+        let collectables = self
+            .collectables
+            .entry(game)
+            .or_default()
+            .update_infallible(memory.read_collectable_count(game));
+
+        let category_requirement = match game {
+            Game::Spyro1 => DRAGON_CATEGORY_REQUIREMENT,
+            Game::Spyro2 => ORB_CATEGORY_REQUIREMENT,
+            Game::Spyro3 => EGG_CATEGORY_REQUIREMENT,
+        };
+
+        if collectables.increased() {
+            if collectables.current == category_requirement {
+                Some(Collection::CategoryRequirement)
+            } else {
+                Some(Collection::Intermediate)
+            }
+        } else {
+            None
+        }
     }
 }

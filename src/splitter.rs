@@ -9,7 +9,7 @@ use asr::{
     watcher::Watcher,
 };
 
-use cache::{Cache, Occurrence};
+use cache::{Cache, Collection, Occurrence};
 use memory::{Game, Memory};
 use settings::{Settings, Split};
 
@@ -34,7 +34,8 @@ impl<'a> Splitter<'a> {
             self.select_game().await?;
 
             // Wait to gain control of Spyro if this is the first time we are starting this game
-            if let Occurrence::First(_) = self.start_game(&mut cache).await? {
+            let game = self.start_game(&mut cache).await?;
+            if let Occurrence::First(_) = game {
                 self.gain_control().await?;
             }
 
@@ -42,7 +43,7 @@ impl<'a> Splitter<'a> {
             self.settings.update();
 
             // Run the current game
-            self.run_game(&mut cache).await?;
+            self.run_game(game.data(), &mut cache).await?;
             timer::resume_game_time();
         }
     }
@@ -93,7 +94,7 @@ impl<'a> Splitter<'a> {
         Ok(())
     }
 
-    async fn run_game(&self, cache: &mut Cache) -> Result<(), TimerState> {
+    async fn run_game(&self, game: Game, cache: &mut Cache) -> Result<(), TimerState> {
         loop {
             // If no longer in game, exit
             let in_game = self.memory.read_in_game();
@@ -126,6 +127,18 @@ impl<'a> Splitter<'a> {
             // Automatically split on boss kill
             if let Some(occurrence) = cache.boss().killed(&self.memory) {
                 split_on_occurrence(occurrence, |boss| self.settings.split_on_boss_kill(boss));
+            }
+
+            // Automaticaly split when collectables are picked up (varies by game)
+            if let Some(collection) = cache.collectables().collected(game, &self.memory) {
+                match self.settings.split_on_collectable_collected(game) {
+                    settings::CollectableSplit::Never => (),
+                    settings::CollectableSplit::EveryCollection => timer::split(),
+                    settings::CollectableSplit::OnCategoryRequirement => match collection {
+                        Collection::Intermediate => (),
+                        Collection::CategoryRequirement => timer::split(),
+                    },
+                }
             }
 
             next_tick().await?;

@@ -153,6 +153,36 @@ impl<'a> Memory<'a> {
         sorceress_sbr_health
     }
 
+    pub fn read_collectable_count(&self, game: Game) -> u8 {
+        match game {
+            Game::Spyro1 => self.read_dragons(),
+            Game::Spyro2 => u8::MAX, // Orbs not yet supported
+            Game::Spyro3 => self.read_eggs(),
+        }
+    }
+
+    fn read_dragons(&self) -> u8 {
+        let path = &[0x034160D0, 0x28, 0x20, 0x100, 0x8, 0x30, 0x27C];
+
+        // The amount of dragons collected when playing Spyro 1
+        let dragons = self.read::<u8>(path).unwrap_or_default();
+
+        timer::set_variable("dragons", &dragons.to_string());
+
+        dragons
+    }
+
+    fn read_eggs(&self) -> u8 {
+        let path = &[0x034160D0, 0x28, 0x20, 0x100, 0x8, 0x30, 0x28C];
+
+        // The amount of eggs collected when playing Spyro 3
+        let eggs = self.read::<u8>(path).unwrap_or_default();
+
+        timer::set_variable("eggs", &eggs.to_string());
+
+        eggs
+    }
+
     fn read<T: Pod>(&self, path: &[u64]) -> Option<T> {
         self.process
             .read_pointer_path::<T>(self.address, PointerSize::Bit64, path)

@@ -1,3 +1,5 @@
+use crate::splitter::memory::Game;
+
 use super::memory::Boss;
 use asr::settings::gui::{Gui, Title};
 
@@ -6,6 +8,13 @@ pub enum Split {
     FirstTime,
     EveryTime,
     Never,
+}
+
+#[derive(Gui, Clone, Copy)]
+pub enum CollectableSplit {
+    Never,
+    OnCategoryRequirement,
+    EveryCollection,
 }
 
 #[derive(Gui)]
@@ -21,6 +30,11 @@ pub struct Settings {
     /// Spyro 1
     #[heading_level = 0]
     _title_s1: Title,
+
+    /// Split on Dragon Collected
+    ///
+    /// `OnCategoryRequirement` will split after Spyro has collected 80 dragons.
+    s1_dragon_collected: CollectableSplit,
 
     /// Split on Exit
     #[heading_level = 1]
@@ -226,6 +240,11 @@ pub struct Settings {
 
     /// Split on Sorceress SBR Kill
     s3_sorceress_sbr_kill: Split,
+
+    /// Split on Egg Collected
+    ///
+    /// `OnCategoryRequirement` will split after Spyro has collected 149 eggs.
+    s3_egg_collected: CollectableSplit,
 
     /// Split on Exit
     #[heading_level = 1]
@@ -436,6 +455,14 @@ impl Settings {
             Boss::Ripto(_) => self.s2_ripto_kill,
             Boss::SorceressLair(_) => self.s3_sorceress_lair_kill,
             Boss::SorceressSBR(_) => self.s3_sorceress_sbr_kill,
+        }
+    }
+
+    pub fn split_on_collectable_collected(&self, game: Game) -> CollectableSplit {
+        match game {
+            Game::Spyro1 => self.s1_dragon_collected,
+            Game::Spyro2 => CollectableSplit::Never, // Orbs not yet supported
+            Game::Spyro3 => self.s3_egg_collected,
         }
     }
 }
