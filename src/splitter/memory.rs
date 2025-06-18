@@ -18,9 +18,9 @@ pub enum Boss {
 impl Boss {
     pub fn health(&self) -> u8 {
         match *self {
-            Boss::Ripto(health) => health,
-            Boss::SorceressLair(health) => health,
-            Boss::SorceressSBR(health) => health,
+            Boss::Ripto(health) | Boss::SorceressLair(health) | Boss::SorceressSBR(health) => {
+                health
+            }
         }
     }
 }
@@ -40,7 +40,7 @@ impl<'a> Memory<'a> {
 
         // String that looks like a folder path (i.e. "/LS102_StoneHill/Maps/")
         let map = self.read::<ArrayWString<256>>(path)?;
-        let map = String::from_utf16(&map).expect("ArrayWString should convert to String.");
+        let map = String::from_utf16(&map).ok()?;
 
         timer::set_variable("map", &map);
 
