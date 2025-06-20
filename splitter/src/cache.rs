@@ -1,12 +1,12 @@
-use std::collections::{HashMap, HashSet};
+mod boss;
+mod collectables;
+mod game;
+mod map;
 
-use asr::watcher::{Pair, Watcher};
-
-use super::memory::{Boss, Game, Memory};
-
-const DRAGON_CATEGORY_REQUIREMENT: u8 = 80;
-const ORB_CATEGORY_REQUIREMENT: u8 = 40;
-const EGG_CATEGORY_REQUIREMENT: u8 = 149;
+pub use boss::BossCache;
+pub use collectables::{CollectableCache, Collection};
+pub use game::GameCache;
+pub use map::MapCache;
 
 pub enum Occurrence<T: Clone> {
     First(T),
@@ -19,11 +19,6 @@ impl<T: Clone> Occurrence<T> {
             Self::First(data) | Self::Additional(data) => data.clone(),
         }
     }
-}
-
-pub enum Collection {
-    Intermediate,
-    CategoryRequirement,
 }
 
 pub struct Cache {
@@ -57,133 +52,5 @@ impl Cache {
 
     pub fn collectables(&mut self) -> &mut CollectableCache {
         &mut self.collectables
-    }
-}
-
-pub struct GameCache {
-    games_started: HashSet<Game>,
-}
-
-impl GameCache {
-    pub fn new() -> Self {
-        Self {
-            games_started: HashSet::new(),
-        }
-    }
-
-    pub fn started(&mut self, memory: &Memory) -> Option<Occurrence<Game>> {
-        let game = memory.read_game()?;
-        match self.games_started.insert(game) {
-            true => Some(Occurrence::First(game)),
-            false => Some(Occurrence::Additional(game)),
-        }
-    }
-}
-
-pub struct MapCache {
-    map: Watcher<String>,
-    maps_exited: HashSet<String>,
-}
-
-impl MapCache {
-    pub fn new() -> Self {
-        Self {
-            map: Watcher::new(),
-            maps_exited: HashSet::new(),
-        }
-    }
-
-    pub fn exited(&mut self, memory: &Memory) -> Option<Occurrence<String>> {
-        let map = memory.read_map()?;
-        let map = self.map.update_infallible(map);
-
-        if map.changed() && MapCache::is_valid_map_transition(map) {
-            return match self.maps_exited.insert(map.old.clone()) {
-                true => Some(Occurrence::First(map.old.clone())),
-                false => Some(Occurrence::Additional(map.old.clone())),
-            };
-        }
-
-        None
-    }
-
-    fn is_valid_map_transition(map: &Pair<String>) -> bool {
-        map.current
-            == match &map.old as &str {
-                "/LS101_ArtisansHome/Maps/" => "/LS107_PeacekeeperHome/Maps/",
-                "/LS107_PeacekeeperHome/Maps/" => "/LS113_MagicHome/Maps/",
-                "/LS113_MagicHome/Maps/" => "/LS119_BeastHome/Maps/",
-                "/LS119_BeastHome/Maps/" => "/LS125_DreamWeaverHome/Maps/",
-                "/LS125_DreamWeaverHome/Maps/" => "/LS131_GnastyHome/Maps/",
-                "/LS208_CrushsDungeon/Maps/" => "/LS210_AutumnPlains_Home/Maps/",
-                "/LS219_GulpsOverlook/Maps/" => "/LS222_WinterTundra_Home/Maps/",
-                "/LS227_RiptosArena/Maps/" => "/LS229_DragonShores/Maps/",
-                _ => &map.current,
-            }
-    }
-}
-
-pub struct BossCache {
-    boss: Watcher<Option<Boss>>,
-    bosses_killed: HashSet<Boss>,
-}
-
-impl BossCache {
-    pub fn new() -> Self {
-        Self {
-            boss: Watcher::new(),
-            bosses_killed: HashSet::new(),
-        }
-    }
-
-    pub fn killed(&mut self, memory: &Memory) -> Option<Occurrence<Boss>> {
-        let boss = self.boss.update_infallible(memory.read_boss());
-        let old_boss = boss.old?;
-        let current_boss = boss.current?;
-
-        if old_boss.health() == 1 && current_boss.health() == 0 {
-            return match self.bosses_killed.insert(current_boss) {
-                true => Some(Occurrence::First(current_boss)),
-                false => Some(Occurrence::Additional(current_boss)),
-            };
-        }
-
-        None
-    }
-}
-
-pub struct CollectableCache {
-    collectables: HashMap<Game, Watcher<u8>>,
-}
-
-impl CollectableCache {
-    pub fn new() -> Self {
-        Self {
-            collectables: HashMap::new(),
-        }
-    }
-
-    pub fn collected(&mut self, game: Game, memory: &Memory) -> Option<Collection> {
-        let collectables = self
-            .collectables
-            .entry(game)
-            .or_default()
-            .update_infallible(memory.read_collectable_count(game));
-
-        let category_requirement = match game {
-            Game::Spyro1 => DRAGON_CATEGORY_REQUIREMENT,
-            Game::Spyro2 => ORB_CATEGORY_REQUIREMENT,
-            Game::Spyro3 => EGG_CATEGORY_REQUIREMENT,
-        };
-
-        if collectables.increased() {
-            if collectables.current == category_requirement {
-                Some(Collection::CategoryRequirement)
-            } else {
-                Some(Collection::Intermediate)
-            }
-        } else {
-            None
-        }
     }
 }
