@@ -1,4 +1,4 @@
-use crate::splitter::memory::Game;
+use crate::memory::Game;
 
 use super::memory::Boss;
 use asr::settings::gui::{Gui, Title};

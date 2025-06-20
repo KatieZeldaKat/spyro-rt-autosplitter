@@ -1,5 +1,3 @@
-mod splitter;
-
 use asr::{Process, print_message, settings::Gui};
 use splitter::{Splitter, settings::Settings};
 
