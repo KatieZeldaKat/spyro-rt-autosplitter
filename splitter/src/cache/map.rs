@@ -1,14 +1,17 @@
 use super::Occurrence;
-use crate::memory::Memory;
-use asr::watcher::{Watcher, Pair};
+use crate::Memory;
+use asr::watcher::{Pair, Watcher};
 use std::collections::HashSet;
 
+/// Caches the current map, tracking when map transitions occur.
 pub struct MapCache {
     map: Watcher<String>,
     maps_exited: HashSet<String>,
 }
 
 impl MapCache {
+    /// Creates a new [`MapCache`] instance.
+    /// Intended to be owned by [`Cache`](super::Cache).
     pub fn new() -> Self {
         Self {
             map: Watcher::new(),
@@ -16,6 +19,9 @@ impl MapCache {
         }
     }
 
+    /// Returns an [`Occurrence`] if a map has been exited *and* this is a valid map transition
+    /// since the last time this method was called. Should be called every frame to ensure changes
+    /// are tracked as soon as possible.
     pub fn exited(&mut self, memory: &Memory) -> Option<Occurrence<String>> {
         let map = memory.read_map()?;
         let map = self.map.update_infallible(map);
@@ -43,5 +49,11 @@ impl MapCache {
                 "/LS227_RiptosArena/Maps/" => "/LS229_DragonShores/Maps/",
                 _ => &map.current,
             }
+    }
+}
+
+impl Default for MapCache {
+    fn default() -> Self {
+        Self::new()
     }
 }

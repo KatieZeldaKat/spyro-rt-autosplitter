@@ -6,7 +6,8 @@ asr::async_main!(stable);
 const EXE: &str = "Spyro-Win64-Shipping.exe";
 const TICK_RATE: u8 = 30;
 
-async fn main() {
+/// The entry point to the auto-splitter. More info can be found in [`Splitter`].
+pub async fn main() {
     asr::set_tick_rate(f64::from(TICK_RATE));
     let mut settings = Settings::register();
 

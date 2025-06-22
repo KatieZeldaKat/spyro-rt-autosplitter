@@ -1,22 +1,40 @@
-use crate::memory::Game;
-
-use super::memory::Boss;
+use crate::{Boss, Game};
 use asr::settings::gui::{Gui, Title};
 
+/// The options to split for most settings.
 #[derive(Gui, Clone, Copy)]
 pub enum Split {
+    /// Split only the first time the setting's event occurs (default).
     FirstTime,
+
+    /// Split every time the setting's event occurs.
     EveryTime,
+
+    /// Never split when the setting's event occurs.
     Never,
 }
 
+/// Specific to settings for collectable items.
+/// Any splits will occur the first frame Spyro can move after collecting an item.
 #[derive(Gui, Clone, Copy)]
 pub enum CollectableSplit {
+    /// Never split upon the item's collection (default).
     Never,
+
+    /// Only split if it satisfies a [category extension](https://www.speedrun.com/spyrortce)
+    /// for collectables.
+    ///
+    /// - Spyro the Dragon - 80 Dragons
+    /// - Spyro 2: Ripto's Rage - 40 Orbs
+    /// - Spyro: Year of the Dragon - 149 Eggs
     OnCategoryRequirement,
+
+    /// Always split upon pickup of a collectable.
     EveryCollection,
 }
 
+/// Settings one can edit via GUI (where supported) or by editing a split XML file directly.
+/// Any enabled level splits will occur upon exiting a level, not upon entry.
 #[derive(Gui)]
 pub struct Settings {
     /// General
@@ -351,6 +369,7 @@ pub struct Settings {
 }
 
 impl Settings {
+    /// The corresponding [`Split`] setting for a given map.
     pub fn split_on_map_exit(&self, map: &str) -> Split {
         match map {
             "/LS101_ArtisansHome/Maps/" => self.s1_artisans,
@@ -450,6 +469,7 @@ impl Settings {
         }
     }
 
+    /// The corresponding [`Split`] setting for a given [`Boss`].
     pub fn split_on_boss_kill(&self, boss: Boss) -> Split {
         match boss {
             Boss::Ripto(_) => self.s2_ripto_kill,
@@ -458,6 +478,7 @@ impl Settings {
         }
     }
 
+    /// The corresponding [`CollectableSplit`] setting for a given [`Game`].
     pub fn split_on_collectable_collected(&self, game: Game) -> CollectableSplit {
         match game {
             Game::Spyro1 => self.s1_dragon_collected,

@@ -1,6 +1,7 @@
 use asr::{Address, PointerSize, Process, string::ArrayWString, timer};
 use bytemuck::Pod;
 
+/// The games present in Spyro: Reignited.
 #[derive(Eq, Hash, PartialEq, Clone, Copy)]
 pub enum Game {
     Spyro1,
@@ -8,6 +9,7 @@ pub enum Game {
     Spyro3,
 }
 
+/// The bosses which can have their health tracked. See [`Boss::health()`].
 #[derive(Eq, Hash, PartialEq, Clone, Copy)]
 pub enum Boss {
     Ripto(u8),
@@ -16,6 +18,8 @@ pub enum Boss {
 }
 
 impl Boss {
+    /// The health a boss currently has. Useful for places where you don't care what boss is
+    /// being faced and just need to extract what the current health is.
     pub fn health(&self) -> u8 {
         match *self {
             Boss::Ripto(health) | Boss::SorceressLair(health) | Boss::SorceressSBR(health) => {
@@ -25,16 +29,25 @@ impl Boss {
     }
 }
 
+/// Contains methods to read memory from Spyro: Reignited.
+/// Intended to be owned by [`Splitter`](crate::Splitter).
 pub struct Memory<'a> {
     process: &'a Process,
     address: Address,
 }
 
 impl<'a> Memory<'a> {
+    /// Instantiates a new [`Memory`] instance. Since the splitter needs to read the memory
+    /// of a process, the instance must live as long as the process provided.
     pub fn new(process: &'a Process, address: Address) -> Self {
         Self { process, address }
     }
 
+    /// Reads the loading/loaded map. This value updates the moment Spyro begins to leave a level,
+    /// meaning a level does not need to be loaded yet for a split to register.
+    ///
+    /// Sometimes, the map cannot be read from memory. In this case, [`None`] is returned. This
+    /// is common when exiting boss levels in Spyro: Year of the Dragon, but can happen elsewhere.
     pub fn read_map(&self) -> Option<String> {
         let path = &[0x03415F30, 0x138, 0xB0, 0xB0, 0x598, 0x210, 0xB8, 0x148, 0x190, 0x0];
 
@@ -47,6 +60,9 @@ impl<'a> Memory<'a> {
         Some(map)
     }
 
+    /// True if the game is loading, false otherwise. Note that this value shouldn't be the sole
+    /// decider to pause game time, so [`read_in_menu()`](Memory::read_in_menu) and
+    /// [`read_in_game()`](Memory::read_in_game) should also be considered.
     pub fn read_is_loading(&self) -> bool {
         let path = &[0x03415F30, 0xF8, 0x4A8, 0xE19];
 
@@ -58,6 +74,8 @@ impl<'a> Memory<'a> {
         is_loading
     }
 
+    /// True if in a menu or graphics submenu, false otherwise.
+    /// Timer should always be running if in a menu in the middle of a run.
     pub fn read_in_menu(&self) -> bool {
         let path = &[0x034160D0, 0x20, 0x218, 0x60];
 
@@ -69,6 +87,7 @@ impl<'a> Memory<'a> {
         in_menu
     }
 
+    /// True if in the game (not in the title screen and main menu), false otherwise.
     pub fn read_in_game(&self) -> bool {
         let path = &[0x03415F30, 0xF0, 0x378, 0x564];
 
@@ -80,6 +99,8 @@ impl<'a> Memory<'a> {
         in_game
     }
 
+    /// True if Spyro can move, false otherwise. Should be used to await Spyro gaining control
+    /// at the beginning of a run, otherwise other methods should be used to determine loading.
     pub fn read_in_control(&self) -> bool {
         let path = &[0x03415F30, 0xF8, 0x478];
 
@@ -91,6 +112,7 @@ impl<'a> Memory<'a> {
         in_control
     }
 
+    /// A [`Game`] if in a game file (Spyro 1-3), [`None`] otherwise.
     pub fn read_game(&self) -> Option<Game> {
         let path = &[0x03415F30, 0xF8, 0x290, 0x0, 0x1F8];
 
@@ -107,6 +129,7 @@ impl<'a> Memory<'a> {
         }
     }
 
+    /// A [`Boss`] if facing a boss with trackable health, [`None`] otherwise.
     pub fn read_boss(&self) -> Option<Boss> {
         match &self.read_map().unwrap_or_default() as &str {
             "/LS227_RiptosArena/Maps/" => Some(Boss::Ripto(self.read_ripto_health())),
@@ -153,6 +176,14 @@ impl<'a> Memory<'a> {
         sorceress_sbr_health
     }
 
+    /// Given a game, returns the number of collectables earned for that specific game.
+    /// This value updates the frame that Spyro gains control after collecting the item.
+    ///
+    /// # Collectables
+    ///
+    /// - Spyro the Dragon - Dragons
+    /// - Spyro 2: Ripto's Rage - Orbs
+    /// - Spyro: Year of the Dragon - Eggs
     pub fn read_collectable_count(&self, game: Game) -> u8 {
         match game {
             Game::Spyro1 => self.read_dragons(),
