@@ -1,5 +1,5 @@
 use asr::{Process, print_message, settings::Gui};
-use splitter::{Splitter, settings::Settings};
+use splitter::{Splitter, memory::MemoryReader, settings::Settings};
 
 asr::async_main!(stable);
 
@@ -18,7 +18,8 @@ pub async fn main() {
                 if let Ok((address, module_size)) = process.get_module_range(EXE) {
                     detect_game_version(module_size);
 
-                    let mut splitter = Splitter::new(&process, address, &mut settings);
+                    let memory = MemoryReader::new(&process, address);
+                    let mut splitter = Splitter::new(&memory, &mut settings);
                     loop {
                         let _ = splitter.run().await;
                     }

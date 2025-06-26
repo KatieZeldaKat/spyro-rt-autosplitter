@@ -1,4 +1,4 @@
-use crate::{Boss, Game};
+use crate::memory::{Boss, Game};
 use asr::settings::gui::{Gui, Title};
 
 /// The options to split for most settings.

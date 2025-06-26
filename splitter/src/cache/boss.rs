@@ -1,5 +1,5 @@
 use super::Occurrence;
-use crate::{Boss, Memory};
+use crate::memory::{Boss, Memory};
 use asr::watcher::Watcher;
 use std::collections::HashSet;
 
@@ -21,7 +21,7 @@ impl BossCache {
 
     /// Returns an [`Occurrence`] if a boss has been killed since the last time this method was
     /// called. Should be called every frame to ensure changes are tracked as soon as possible.
-    pub fn killed(&mut self, memory: &Memory) -> Option<Occurrence<Boss>> {
+    pub fn killed(&mut self, memory: &impl Memory) -> Option<Occurrence<Boss>> {
         let boss = self.boss.update_infallible(memory.read_boss());
         let old_boss = boss.old?;
         let current_boss = boss.current?;

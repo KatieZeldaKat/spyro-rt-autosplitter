@@ -1,20 +1,22 @@
-use crate::cache::{Cache, Collection, Occurrence};
-use crate::memory::{Game, Memory};
-use crate::settings::{CollectableSplit, Settings, Split};
+use crate::{
+    cache::{Cache, Collection, Occurrence},
+    memory::{Game, Memory},
+    settings::{CollectableSplit, Settings, Split},
+};
 use asr::{
-    Address, Process, future,
+    future,
     settings::Gui,
     timer::{self, TimerState},
     watcher::Watcher,
 };
 
 /// Manages all runs for the auto-splitter.
-pub struct Splitter<'a> {
-    memory: Memory<'a>,
+pub struct Splitter<'a, T: Memory> {
+    memory: &'a T,
     settings: &'a mut Settings,
 }
 
-impl<'a> Splitter<'a> {
+impl<'a, T: Memory> Splitter<'a, T> {
     /// Initializes a new [`Splitter`] instance. Since the splitter needs to read the memory
     /// of a process, the instance must live as long as the process provided.
     ///
@@ -24,15 +26,14 @@ impl<'a> Splitter<'a> {
     /// let mut settings = Settings::register();
     /// let process = Process::attach("game.exe").unwrap();
     /// if let Ok(address) = process.get_module_address("game.exe") {
-    ///     let splitter = Splitter::new(&process, address, &mut settings);
+    ///     let memory = MemoryReader::new(&process, address);
+    ///     let splitter = Splitter::new(&memory, &mut settings);
+    ///
     ///     // code to run the splitter
     /// }
     /// ```
-    pub fn new(process: &'a Process, address: Address, settings: &'a mut Settings) -> Self {
-        Self {
-            memory: Memory::new(process, address),
-            settings,
-        }
+    pub fn new(memory: &'a T, settings: &'a mut Settings) -> Self {
+        Self { memory, settings }
     }
 
     /// Initializes a run of the auto-splitter. This function will only return once the timer is no
@@ -85,7 +86,7 @@ impl<'a> Splitter<'a> {
 
     async fn start_game(&self, cache: &mut Cache) -> Result<Occurrence<Game>, TimerState> {
         loop {
-            if let Some(occurrence) = cache.game().started(&self.memory) {
+            if let Some(occurrence) = cache.game().started(self.memory) {
                 return Ok(occurrence);
             }
 
@@ -133,17 +134,17 @@ impl<'a> Splitter<'a> {
             }
 
             // Automatically split on map exit
-            if let Some(occurrence) = cache.map().exited(&self.memory) {
+            if let Some(occurrence) = cache.map().exited(self.memory) {
                 split_on_occurrence(occurrence, |map| self.settings.split_on_map_exit(&map));
             }
 
             // Automatically split on boss kill
-            if let Some(occurrence) = cache.boss().killed(&self.memory) {
+            if let Some(occurrence) = cache.boss().killed(self.memory) {
                 split_on_occurrence(occurrence, |boss| self.settings.split_on_boss_kill(boss));
             }
 
             // Automaticaly split when collectables are picked up (varies by game)
-            if let Some(collection) = cache.collectables().collected(game, &self.memory) {
+            if let Some(collection) = cache.collectables().collected(game, self.memory) {
                 match self.settings.split_on_collectable_collected(game) {
                     CollectableSplit::Never => (),
                     CollectableSplit::EveryCollection => timer::split(),

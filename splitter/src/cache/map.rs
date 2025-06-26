@@ -1,5 +1,5 @@
 use super::Occurrence;
-use crate::Memory;
+use crate::memory::Memory;
 use asr::watcher::{Pair, Watcher};
 use std::collections::HashSet;
 
@@ -22,7 +22,7 @@ impl MapCache {
     /// Returns an [`Occurrence`] if a map has been exited *and* this is a valid map transition
     /// since the last time this method was called. Should be called every frame to ensure changes
     /// are tracked as soon as possible.
-    pub fn exited(&mut self, memory: &Memory) -> Option<Occurrence<String>> {
+    pub fn exited(&mut self, memory: &impl Memory) -> Option<Occurrence<String>> {
         let map = memory.read_map()?;
         let map = self.map.update_infallible(map);
 

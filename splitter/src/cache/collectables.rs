@@ -1,4 +1,4 @@
-use crate::{Game, Memory};
+use crate::memory::{Game, Memory};
 use asr::watcher::Watcher;
 use std::collections::HashMap;
 
@@ -30,7 +30,7 @@ impl CollectableCache {
     /// Returns a [`Collection`] if a collectable has been collected since the last time this
     /// method was called. Should be called every frame to ensure changes are tracked as soon
     /// as possible.
-    pub fn collected(&mut self, game: Game, memory: &Memory) -> Option<Collection> {
+    pub fn collected(&mut self, game: Game, memory: &impl Memory) -> Option<Collection> {
         let collectables = self
             .collectables
             .entry(game)
