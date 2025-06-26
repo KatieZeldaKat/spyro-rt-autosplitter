@@ -21,9 +21,8 @@ pub struct MemoryReader<'a> {
 }
 
 impl<'a> MemoryReader<'a> {
-    /// Instantiates a new [`MemoryReader`] instance. Since the splitter needs to read the memory
-    /// of a process, the instance must live as long as the process provided.
-    pub fn new(process: &'a Process, address: Address) -> Self {
+    /// Instantiates a new [`MemoryReader`] instance to read from the Steam version.
+    pub fn new_steam(process: &'a Process, address: Address) -> Self {
         Self {
             process,
             address,
@@ -41,6 +40,31 @@ impl<'a> MemoryReader<'a> {
             sorceress_sbr_path: Box::new([0x0341B1D0, 0xF8, 0x290, 0x50, 0x8A0, 0xB28]),
             dragons_path: Box::new([0x034160D0, 0x28, 0x20, 0x100, 0x8, 0x30, 0x27C]),
             eggs_path: Box::new([0x034160D0, 0x28, 0x20, 0x100, 0x8, 0x30, 0x28C]),
+        }
+    }
+
+    /// Instantiates a new [`MemoryReader`] instance to read from the Game Pass version.
+    pub fn new_game_pass(process: &'a Process, address: Address) -> Self {
+        Self {
+            process,
+            address,
+
+            map_path: Box::new([
+                0x054A0CA0, 0x138, 0xB0, 0xB0, 0x598, 0x210, 0xB8, 0x148, 0x190, 0x0,
+            ]),
+            loading_path: Box::new([0x054A0CA0, 0xF8, 0x4A8, 0xE19]),
+            in_menu_path: Box::new([0x054A12D0, 0x20, 0x218, 0x60]),
+            in_game_path: Box::new([0x054A0CA0, 0xF0, 0x378, 0x564]),
+            in_control_path: Box::new([0x054A0CA0, 0xF8, 0x478]),
+            game_path: Box::new([0x054A0CA0, 0xF8, 0x290, 0x0, 0x1F8]),
+            ripto_path: Box::new([0x054A0CA0, 0x110, 0x50, 0x140, 0x8, 0x1D0, 0x134]),
+            // Can flicker between health and `null` on occassion; should be further tested
+            sorceress_lair_path: Box::new([
+                0x054A0CA0, 0x30, 0xA0, 0xE8, 0xE90, 0x108, 0x3E8, 0xA28,
+            ]),
+            sorceress_sbr_path: Box::new([0x054AB670, 0xF8, 0x290, 0x50, 0x8A0, 0xB28]),
+            dragons_path: Box::new([0x054A12D0, 0x28, 0x20, 0x100, 0x8, 0x30, 0x27C]),
+            eggs_path: Box::new([0x054A12D0, 0x28, 0x20, 0x100, 0x8, 0x30, 0x28C]),
         }
     }
 

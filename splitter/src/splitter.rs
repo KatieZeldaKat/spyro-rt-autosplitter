@@ -26,7 +26,7 @@ impl<'a, T: Memory> Splitter<'a, T> {
     /// let mut settings = Settings::register();
     /// let process = Process::attach("game.exe").unwrap();
     /// if let Ok(address) = process.get_module_address("game.exe") {
-    ///     let memory = MemoryReader::new(&process, address);
+    ///     let memory = MemoryReader::new_steam(&process, address);
     ///     let splitter = Splitter::new(&memory, &mut settings);
     ///
     ///     // code to run the splitter
