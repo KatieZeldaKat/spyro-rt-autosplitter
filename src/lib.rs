@@ -57,7 +57,10 @@ fn get_game_version(module_size: u64) -> GameVersion {
             GameVersion::GamePass
         }
         size => {
-            print_message(&format!("Game Detected: Unknown Version (module size = `{}`", size));
+            print_message(&format!(
+                "Game Detected: Unknown Version (module size = `{}`",
+                size
+            ));
             GameVersion::Unknown
         }
     }
