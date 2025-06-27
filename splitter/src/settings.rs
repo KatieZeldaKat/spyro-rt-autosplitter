@@ -4,12 +4,18 @@ use asr::settings::gui::{Gui, Title};
 /// The options to split for most settings.
 #[derive(Gui, Clone, Copy)]
 pub enum Split {
+    /// FirstTime
+    ///
     /// Split only the first time the setting's event occurs (default).
     FirstTime,
 
+    /// EveryTime
+    ///
     /// Split every time the setting's event occurs.
     EveryTime,
 
+    /// Never
+    ///
     /// Never split when the setting's event occurs.
     Never,
 }
@@ -18,9 +24,13 @@ pub enum Split {
 /// Any splits will occur the first frame Spyro can move after collecting an item.
 #[derive(Gui, Clone, Copy)]
 pub enum CollectableSplit {
+    /// Never
+    ///
     /// Never split upon the item's collection (default).
     Never,
 
+    /// OnCategoryRequirement
+    ///
     /// Only split if it satisfies a [category extension](https://www.speedrun.com/spyrortce)
     /// for collectables.
     ///
@@ -29,6 +39,8 @@ pub enum CollectableSplit {
     /// - Spyro: Year of the Dragon - 149 Eggs
     OnCategoryRequirement,
 
+    /// EveryCollection
+    ///
     /// Always split upon pickup of a collectable.
     EveryCollection,
 }
@@ -290,7 +302,7 @@ pub struct Settings {
     s3_buzzs_dungeon: Split,
 
     /// Crawdad Farm
-    s3_crawdad_farms: Split,
+    s3_crawdad_farm: Split,
 
     /// Icy Peak
     s3_icy_peak: Split,
@@ -328,13 +340,13 @@ pub struct Settings {
     /// Charmed Ridge
     s3_charmed_ridge: Split,
 
-    /// Bentleys Outpost
+    /// Bentley's Outpost
     s3_bentleys_outpost: Split,
 
     /// Honey Speedway
     s3_honey_speedway: Split,
 
-    /// Scorchs Pit
+    /// Scorch's Pit
     s3_scorchs_pit: Split,
 
     /// Starfish Reef
@@ -365,7 +377,7 @@ pub struct Settings {
     s3_bugbot_factory: Split,
 
     /// Super Bonus Round
-    s3_super_bonus: Split,
+    s3_super_bonus_round: Split,
 }
 
 impl Settings {
@@ -439,7 +451,7 @@ impl Settings {
             "/LS306_SheilasAlp/Maps/" => self.s3_sheilas_alp,
             "/LS307_MushroomSpeedway/Maps/" => self.s3_mushroom_speedway,
             "/LS308_BuzzsDungeon/Maps/" => self.s3_buzzs_dungeon,
-            "/LS309_CrawdadFarm/Maps/" => self.s3_crawdad_farms,
+            "/LS309_CrawdadFarm/Maps/" => self.s3_crawdad_farm,
             "/LS311_IcyPeak/Maps/" => self.s3_icy_peak,
             "/LS312_EnchantedTowers/Maps/" => self.s3_enchanted_towers,
             "/LS313_SpookySwamp/Maps/" => self.s3_spooky_swamp,
@@ -464,7 +476,7 @@ impl Settings {
             "/LS334_HarborSpeedway/Maps/" => self.s3_harbor_speedway,
             "/LS335_SorceressLair/Maps/" => self.s3_sorceresss_lair,
             "/LS336_BugbotFactory/Maps/" => self.s3_bugbot_factory,
-            "/LS337_SuperBonusRound/Maps/" => self.s3_super_bonus,
+            "/LS337_SuperBonusRound/Maps/" => self.s3_super_bonus_round,
             _ => Split::Never,
         }
     }
