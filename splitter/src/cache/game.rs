@@ -33,3 +33,56 @@ impl Default for GameCache {
         Self::new()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::testing::MockMemory;
+
+    #[test]
+    fn no_occurrence_on_menu() {
+        let mut memory = MockMemory::new();
+        memory.game = None;
+
+        let occurrence = GameCache::new().started(&memory);
+        assert_eq!(occurrence, None);
+    }
+
+    #[test]
+    fn occurrence_when_in_game() {
+        let mut memory = MockMemory::new();
+        memory.game = Some(Game::Spyro1);
+
+        let occurrence = GameCache::new().started(&memory);
+        assert_ne!(occurrence, None);
+    }
+
+    #[test]
+    fn first_and_additional_occurrences() {
+        let mut game_cache = GameCache::new();
+        let mut memory = MockMemory::new();
+        memory.game = Some(Game::Spyro1);
+
+        // First Occurrence
+        let occurrence = game_cache.started(&memory);
+        assert_eq!(occurrence, Some(Occurrence::First(Game::Spyro1)));
+
+        // Second Occurrence
+        let occurrence = game_cache.started(&memory);
+        assert_eq!(occurrence, Some(Occurrence::Additional(Game::Spyro1)));
+    }
+
+    #[test]
+    fn different_games_first_occurrences() {
+        let mut game_cache = GameCache::new();
+        let mut memory = MockMemory::new();
+
+        memory.game = Some(Game::Spyro1);
+        let occurrence = game_cache.started(&memory);
+        assert_eq!(occurrence, Some(Occurrence::First(Game::Spyro1)));
+
+        memory.game = Some(Game::Spyro2);
+        let occurrence = game_cache.started(&memory);
+        assert_eq!(occurrence, Some(Occurrence::First(Game::Spyro2)));
+    }
+}

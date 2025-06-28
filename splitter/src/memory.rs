@@ -2,7 +2,7 @@ mod memory_reader;
 pub use memory_reader::MemoryReader;
 
 /// The games present in Spyro: Reignited.
-#[derive(Eq, Hash, PartialEq, Clone, Copy)]
+#[derive(Eq, Hash, PartialEq, Clone, Copy, Debug)]
 pub enum Game {
     Spyro1,
     Spyro2,
@@ -10,7 +10,7 @@ pub enum Game {
 }
 
 /// The bosses which can have their health tracked. See [`Boss::health()`].
-#[derive(Eq, Hash, PartialEq, Clone, Copy)]
+#[derive(Eq, Hash, PartialEq, Clone, Copy, Debug)]
 pub enum Boss {
     Ripto(u8),
     SorceressLair(u8),

@@ -57,3 +57,92 @@ impl Default for MapCache {
         Self::new()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::testing::MockMemory;
+
+    #[test]
+    fn no_occurrence_on_first_run() {
+        let memory = MockMemory::new();
+        let occurrence = MapCache::new().exited(&memory);
+        assert_eq!(occurrence, None);
+    }
+
+    #[test]
+    fn no_occurrence_on_static_map() {
+        let mut cache = MapCache::new();
+        let mut memory = MockMemory::new();
+
+        memory.map = Some(String::default());
+        let _ = cache.exited(&memory);
+        let occurrence = cache.exited(&memory);
+
+        assert_eq!(occurrence, None);
+    }
+
+    #[test]
+    fn occurrence_on_map_change() {
+        let mut cache = MapCache::new();
+        let mut memory = MockMemory::new();
+
+        memory.map = Some(String::from("one"));
+        let _ = cache.exited(&memory);
+
+        memory.map = Some(String::from("two"));
+        let occurrence = cache.exited(&memory);
+
+        assert_ne!(occurrence, None);
+    }
+
+    #[test]
+    fn first_and_additional_occurrences() {
+        let one = Some(String::from("one"));
+        let two = Some(String::from("two"));
+
+        let mut cache = MapCache::new();
+        let mut memory = MockMemory::new();
+
+        // First Exit
+        memory.map = one.clone();
+        let _ = cache.exited(&memory);
+        memory.map = two.clone();
+        let occurrence = cache.exited(&memory);
+
+        assert_eq!(occurrence, Some(Occurrence::First(one.clone().unwrap())));
+
+        // Second Exit
+        memory.map = one.clone();
+        let _ = cache.exited(&memory);
+        memory.map = two.clone();
+        let occurrence = cache.exited(&memory);
+
+        assert_eq!(occurrence, Some(Occurrence::Additional(one.clone().unwrap())));
+    }
+
+    #[test]
+    fn different_maps_first_occurrences() {
+        let one = Some(String::from("one"));
+        let two = Some(String::from("two"));
+
+        let mut cache = MapCache::new();
+        let mut memory = MockMemory::new();
+
+        // First Exit
+        memory.map = one.clone();
+        let _ = cache.exited(&memory);
+        memory.map = two.clone();
+        let occurrence = cache.exited(&memory);
+
+        assert_eq!(occurrence, Some(Occurrence::First(one.clone().unwrap())));
+
+        // Second Exit
+        memory.map = two.clone();
+        let _ = cache.exited(&memory);
+        memory.map = one.clone();
+        let occurrence = cache.exited(&memory);
+
+        assert_eq!(occurrence, Some(Occurrence::First(two.clone().unwrap())));
+    }
+}

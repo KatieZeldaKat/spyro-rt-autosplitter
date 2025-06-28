@@ -9,6 +9,7 @@ pub use game::GameCache;
 pub use map::MapCache;
 
 /// Specifies the instance in which the contained data has occurred.
+#[derive(Eq, PartialEq, Debug)]
 pub enum Occurrence<T: Clone> {
     First(T),
     Additional(T),

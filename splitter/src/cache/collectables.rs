@@ -8,6 +8,7 @@ const EGG_CATEGORY_REQUIREMENT: u8 = 149;
 
 /// Similar to [`Occurrence`](super::Occurrence), this specifies the instance the
 /// collectable for the current game has been collected.
+#[derive(Eq, PartialEq, Debug)]
 pub enum Collection {
     Intermediate,
     CategoryRequirement,
@@ -58,5 +59,86 @@ impl CollectableCache {
 impl Default for CollectableCache {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::testing::MockMemory;
+
+    #[test]
+    fn no_collection_on_first_run() {
+        let memory = MockMemory::new();
+        let collection = CollectableCache::new().collected(Game::Spyro1, &memory);
+        assert_eq!(collection, None);
+    }
+
+    #[test]
+    fn no_collection_on_static_counter() {
+        let mut cache = CollectableCache::new();
+        let mut memory = MockMemory::new();
+
+        memory.collectable_count = 42;
+        let _ = cache.collected(Game::Spyro1, &memory);
+        let collection = cache.collected(Game::Spyro1, &memory);
+
+        assert_eq!(collection, None);
+    }
+
+    #[test]
+    fn collection_detected() {
+        let mut cache = CollectableCache::new();
+        let mut memory = MockMemory::new();
+
+        memory.collectable_count = 0;
+        let _ = cache.collected(Game::Spyro1, &memory);
+
+        memory.collectable_count = 1;
+        let collection = cache.collected(Game::Spyro1, &memory);
+
+        assert_ne!(collection, None);
+    }
+
+    #[test]
+    fn spyro1_category_collection_detected() {
+        let mut cache = CollectableCache::new();
+        let mut memory = MockMemory::new();
+
+        memory.collectable_count = DRAGON_CATEGORY_REQUIREMENT - 1;
+        let _ = cache.collected(Game::Spyro1, &memory);
+
+        memory.collectable_count = DRAGON_CATEGORY_REQUIREMENT;
+        let collection = cache.collected(Game::Spyro1, &memory);
+
+        assert_eq!(collection, Some(Collection::CategoryRequirement));
+    }
+
+    #[test]
+    fn spyro2_category_collection_detected() {
+        let mut cache = CollectableCache::new();
+        let mut memory = MockMemory::new();
+
+        memory.collectable_count = ORB_CATEGORY_REQUIREMENT - 1;
+        let _ = cache.collected(Game::Spyro2, &memory);
+
+        memory.collectable_count = ORB_CATEGORY_REQUIREMENT;
+        let collection = cache.collected(Game::Spyro2, &memory);
+
+        assert_eq!(collection, Some(Collection::CategoryRequirement));
+    }
+
+    #[test]
+    fn spyro3_category_collection_detected() {
+        let mut cache = CollectableCache::new();
+        let mut memory = MockMemory::new();
+
+        memory.collectable_count = EGG_CATEGORY_REQUIREMENT - 1;
+        let _ = cache.collected(Game::Spyro3, &memory);
+
+        memory.collectable_count = EGG_CATEGORY_REQUIREMENT;
+        let collection = cache.collected(Game::Spyro3, &memory);
+
+        assert_eq!(collection, Some(Collection::CategoryRequirement));
     }
 }
