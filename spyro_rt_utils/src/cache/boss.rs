@@ -4,23 +4,14 @@ use asr::watcher::Watcher;
 use std::collections::HashSet;
 
 /// Caches defeated bosses and the current boss' health, tracking when values change.
+#[derive(Default)]
 pub struct BossCache {
     boss: Watcher<Option<Boss>>,
     bosses_killed: HashSet<Boss>,
 }
 
 impl BossCache {
-    /// Creates a new [`BossCache`] instance.
-    /// Intended to be owned by [`Cache`](super::Cache).
-    pub fn new() -> Self {
-        Self {
-            boss: Watcher::new(),
-            bosses_killed: HashSet::new(),
-        }
-    }
-
-    /// Returns an [`Occurrence`] if a boss has been killed since the last time this method was
-    /// called. Should be called every frame to ensure changes are tracked as soon as possible.
+    /// See [`boss_killed()`](super::Cache::boss_killed).
     pub fn killed(&mut self, memory: &impl Memory) -> Option<Occurrence<Boss>> {
         let boss = self.boss.update_infallible(memory.read_boss());
         let old_boss = boss.old?;
@@ -37,12 +28,6 @@ impl BossCache {
     }
 }
 
-impl Default for BossCache {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -50,15 +35,15 @@ mod tests {
 
     #[test]
     fn no_occurrence_on_first_run() {
-        let memory = MockMemory::new();
-        let occurrence = BossCache::new().killed(&memory);
+        let memory = MockMemory::default();
+        let occurrence = BossCache::default().killed(&memory);
         assert_eq!(occurrence, None);
     }
 
     #[test]
     fn no_occurrence_on_regular_blow() {
-        let mut cache = BossCache::new();
-        let mut memory = MockMemory::new();
+        let mut cache = BossCache::default();
+        let mut memory = MockMemory::default();
 
         memory.boss = Some(Boss::Ripto(5));
         let _ = cache.killed(&memory);
@@ -71,8 +56,8 @@ mod tests {
 
     #[test]
     fn no_occurrence_on_static_health() {
-        let mut cache = BossCache::new();
-        let mut memory = MockMemory::new();
+        let mut cache = BossCache::default();
+        let mut memory = MockMemory::default();
 
         memory.boss = Some(Boss::Ripto(4));
         let _ = cache.killed(&memory);
@@ -83,8 +68,8 @@ mod tests {
 
     #[test]
     fn occurrence_on_final_blow() {
-        let mut cache = BossCache::new();
-        let mut memory = MockMemory::new();
+        let mut cache = BossCache::default();
+        let mut memory = MockMemory::default();
 
         memory.boss = Some(Boss::Ripto(1));
         let _ = cache.killed(&memory);
@@ -100,8 +85,8 @@ mod tests {
         let one_health = Boss::Ripto(1);
         let zero_health = Boss::Ripto(0);
 
-        let mut cache = BossCache::new();
-        let mut memory = MockMemory::new();
+        let mut cache = BossCache::default();
+        let mut memory = MockMemory::default();
 
         // First Kill
         memory.boss = Some(one_health);
@@ -122,8 +107,8 @@ mod tests {
 
     #[test]
     fn different_bosses_first_occurrences() {
-        let mut cache = BossCache::new();
-        let mut memory = MockMemory::new();
+        let mut cache = BossCache::default();
+        let mut memory = MockMemory::default();
 
         memory.boss = Some(Boss::Ripto(1));
         let _ = cache.killed(&memory);

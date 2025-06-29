@@ -97,19 +97,19 @@ dependencies = [
 ]
 
 [[package]]
-name = "splitter"
-version = "0.1.0"
-dependencies = [
- "asr",
- "bytemuck",
-]
-
-[[package]]
 name = "spyro-rt-autosplitter"
 version = "0.1.0"
 dependencies = [
  "asr",
- "splitter",
+ "spyro_rt_utils",
+]
+
+[[package]]
+name = "spyro_rt_utils"
+version = "0.1.0"
+dependencies = [
+ "asr",
+ "bytemuck",
 ]
 
 [[package]]

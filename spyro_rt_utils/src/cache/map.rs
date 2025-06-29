@@ -4,24 +4,14 @@ use asr::watcher::{Pair, Watcher};
 use std::collections::HashSet;
 
 /// Caches the current map, tracking when map transitions occur.
+#[derive(Default)]
 pub struct MapCache {
     map: Watcher<String>,
     maps_exited: HashSet<String>,
 }
 
 impl MapCache {
-    /// Creates a new [`MapCache`] instance.
-    /// Intended to be owned by [`Cache`](super::Cache).
-    pub fn new() -> Self {
-        Self {
-            map: Watcher::new(),
-            maps_exited: HashSet::new(),
-        }
-    }
-
-    /// Returns an [`Occurrence`] if a map has been exited *and* this is a valid map transition
-    /// since the last time this method was called. Should be called every frame to ensure changes
-    /// are tracked as soon as possible.
+    /// See [`map_exited()`](super::Cache::map_exited).
     pub fn exited(&mut self, memory: &impl Memory) -> Option<Occurrence<String>> {
         let map = memory.read_map()?;
         let map = self.map.update_infallible(map);
@@ -52,12 +42,6 @@ impl MapCache {
     }
 }
 
-impl Default for MapCache {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -65,15 +49,15 @@ mod tests {
 
     #[test]
     fn no_occurrence_on_first_run() {
-        let memory = MockMemory::new();
-        let occurrence = MapCache::new().exited(&memory);
+        let memory = MockMemory::default();
+        let occurrence = MapCache::default().exited(&memory);
         assert_eq!(occurrence, None);
     }
 
     #[test]
     fn no_occurrence_on_static_map() {
-        let mut cache = MapCache::new();
-        let mut memory = MockMemory::new();
+        let mut cache = MapCache::default();
+        let mut memory = MockMemory::default();
 
         memory.map = Some(String::default());
         let _ = cache.exited(&memory);
@@ -84,8 +68,8 @@ mod tests {
 
     #[test]
     fn occurrence_on_map_change() {
-        let mut cache = MapCache::new();
-        let mut memory = MockMemory::new();
+        let mut cache = MapCache::default();
+        let mut memory = MockMemory::default();
 
         memory.map = Some(String::from("one"));
         let _ = cache.exited(&memory);
@@ -101,8 +85,8 @@ mod tests {
         let one = Some(String::from("one"));
         let two = Some(String::from("two"));
 
-        let mut cache = MapCache::new();
-        let mut memory = MockMemory::new();
+        let mut cache = MapCache::default();
+        let mut memory = MockMemory::default();
 
         // First Exit
         memory.map = one.clone();
@@ -118,7 +102,10 @@ mod tests {
         memory.map = two.clone();
         let occurrence = cache.exited(&memory);
 
-        assert_eq!(occurrence, Some(Occurrence::Additional(one.clone().unwrap())));
+        assert_eq!(
+            occurrence,
+            Some(Occurrence::Additional(one.clone().unwrap()))
+        );
     }
 
     #[test]
@@ -126,8 +113,8 @@ mod tests {
         let one = Some(String::from("one"));
         let two = Some(String::from("two"));
 
-        let mut cache = MapCache::new();
-        let mut memory = MockMemory::new();
+        let mut cache = MapCache::default();
+        let mut memory = MockMemory::default();
 
         // First Exit
         memory.map = one.clone();

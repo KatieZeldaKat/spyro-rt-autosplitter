@@ -15,22 +15,13 @@ pub enum Collection {
 }
 
 /// Caches the collectables of the current game, tracking when values change.
+#[derive(Default)]
 pub struct CollectableCache {
     collectables: HashMap<Game, Watcher<u8>>,
 }
 
 impl CollectableCache {
-    /// Creates a new [`CollectableCache`] instance.
-    /// Intended to be owned by [`Cache`](super::Cache).
-    pub fn new() -> Self {
-        Self {
-            collectables: HashMap::new(),
-        }
-    }
-
-    /// Returns a [`Collection`] if a collectable has been collected since the last time this
-    /// method was called. Should be called every frame to ensure changes are tracked as soon
-    /// as possible.
+    /// See [`collectable_collected()`](super::Cache::collectable_collected).
     pub fn collected(&mut self, game: Game, memory: &impl Memory) -> Option<Collection> {
         let collectables = self
             .collectables
@@ -56,12 +47,6 @@ impl CollectableCache {
     }
 }
 
-impl Default for CollectableCache {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -69,15 +54,15 @@ mod tests {
 
     #[test]
     fn no_collection_on_first_run() {
-        let memory = MockMemory::new();
-        let collection = CollectableCache::new().collected(Game::Spyro1, &memory);
+        let memory = MockMemory::default();
+        let collection = CollectableCache::default().collected(Game::Spyro1, &memory);
         assert_eq!(collection, None);
     }
 
     #[test]
     fn no_collection_on_static_counter() {
-        let mut cache = CollectableCache::new();
-        let mut memory = MockMemory::new();
+        let mut cache = CollectableCache::default();
+        let mut memory = MockMemory::default();
 
         memory.collectable_count = 42;
         let _ = cache.collected(Game::Spyro1, &memory);
@@ -88,8 +73,8 @@ mod tests {
 
     #[test]
     fn collection_detected() {
-        let mut cache = CollectableCache::new();
-        let mut memory = MockMemory::new();
+        let mut cache = CollectableCache::default();
+        let mut memory = MockMemory::default();
 
         memory.collectable_count = 0;
         let _ = cache.collected(Game::Spyro1, &memory);
@@ -102,8 +87,8 @@ mod tests {
 
     #[test]
     fn spyro1_category_collection_detected() {
-        let mut cache = CollectableCache::new();
-        let mut memory = MockMemory::new();
+        let mut cache = CollectableCache::default();
+        let mut memory = MockMemory::default();
 
         memory.collectable_count = DRAGON_CATEGORY_REQUIREMENT - 1;
         let _ = cache.collected(Game::Spyro1, &memory);
@@ -116,8 +101,8 @@ mod tests {
 
     #[test]
     fn spyro2_category_collection_detected() {
-        let mut cache = CollectableCache::new();
-        let mut memory = MockMemory::new();
+        let mut cache = CollectableCache::default();
+        let mut memory = MockMemory::default();
 
         memory.collectable_count = ORB_CATEGORY_REQUIREMENT - 1;
         let _ = cache.collected(Game::Spyro2, &memory);
@@ -130,8 +115,8 @@ mod tests {
 
     #[test]
     fn spyro3_category_collection_detected() {
-        let mut cache = CollectableCache::new();
-        let mut memory = MockMemory::new();
+        let mut cache = CollectableCache::default();
+        let mut memory = MockMemory::default();
 
         memory.collectable_count = EGG_CATEGORY_REQUIREMENT - 1;
         let _ = cache.collected(Game::Spyro3, &memory);

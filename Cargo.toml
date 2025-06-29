@@ -5,10 +5,10 @@ edition = "2024"
 
 [workspace]
 resolver = "3"
-members = ["splitter"]
+members = ["spyro_rt_utils"]
 
 [dependencies]
-splitter = { path = "splitter/" }
+spyro_rt_utils = { path = "spyro_rt_utils/" }
 asr = { git = "https://github.com/LiveSplit/asr" }
 
 [lib]

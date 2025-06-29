@@ -1,5 +1,8 @@
+mod splitter;
+
 use asr::{Process, print_message, settings::Gui};
-use splitter::{Splitter, memory::MemoryReader, settings::Settings};
+pub use splitter::Splitter;
+use spyro_rt_utils::{memory::MemoryReader, settings::Settings};
 
 asr::async_main!(stable);
 

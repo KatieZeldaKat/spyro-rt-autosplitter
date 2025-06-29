@@ -1,5 +1,9 @@
-use crate::{Memory, memory::{Game, Boss}};
+use crate::{
+    Memory,
+    memory::{Boss, Game},
+};
 
+#[derive(Default)]
 pub struct MockMemory {
     pub map: Option<String>,
     pub is_loading: bool,
@@ -9,27 +13,6 @@ pub struct MockMemory {
     pub game: Option<Game>,
     pub boss: Option<Boss>,
     pub collectable_count: u8,
-}
-
-impl MockMemory {
-    pub fn new() -> Self {
-        Self {
-            map: None,
-            is_loading: false,
-            in_menu: false,
-            in_game: false,
-            in_control: false,
-            game: None,
-            boss: None,
-            collectable_count: 0,
-        }
-    }
-}
-
-impl Default for MockMemory {
-    fn default() -> Self {
-        Self::new()
-    }
 }
 
 impl Memory for MockMemory {

@@ -1,3 +1,5 @@
+//! For reading memory from Spyro: Reignited.
+
 mod memory_reader;
 pub use memory_reader::MemoryReader;
 
@@ -29,12 +31,13 @@ impl Boss {
     }
 }
 
+/// The minimum methods needed to read from memory for splitter functionality.
 pub trait Memory {
     /// Reads the loading/loaded map. This value updates the moment Spyro begins to leave a level,
     /// meaning a level does not need to be loaded yet for a split to register.
     ///
-    /// Sometimes, the map cannot be read from memory. In this case, [`None`] is returned. This
-    /// is common when exiting boss levels in Spyro: Year of the Dragon, but can happen elsewhere.
+    /// Sometimes, the map cannot be read from memory. In this case, [`None`] is returned. This is
+    /// common when exiting boss levels in Spyro: Year of the Dragon, but it can happen elsewhere.
     fn read_map(&self) -> Option<String>;
 
     /// True if the game is loading, false otherwise. Note that this value shouldn't be the sole
@@ -60,12 +63,13 @@ pub trait Memory {
     fn read_boss(&self) -> Option<Boss>;
 
     /// Given a game, returns the number of collectables earned for that specific game.
-    /// This value updates the frame that Spyro gains control after collecting the item.
+    /// This value updates the frame that Spyro gains control after collecting the item
+    /// [citation needed].
     ///
     /// # Collectables
     ///
-    /// - Spyro the Dragon - Dragons
-    /// - Spyro 2: Ripto's Rage - Orbs
-    /// - Spyro: Year of the Dragon - Eggs
+    /// - **Spyro the Dragon** - Dragons
+    /// - **Spyro 2: Ripto's Rage** - Orbs
+    /// - **Spyro: Year of the Dragon** - Eggs
     fn read_collectable_count(&self, game: Game) -> u8;
 }

@@ -1,3 +1,5 @@
+//! For settings that a player can adjust to meet their needs for a run.
+
 use crate::memory::{Boss, Game};
 use asr::settings::gui::{Gui, Title};
 
@@ -20,13 +22,12 @@ pub enum Split {
     Never,
 }
 
-/// Specific to settings for collectable items.
-/// Any splits will occur the first frame Spyro can move after collecting an item.
+/// Similar to [`Split`], but the setting's event always has to do with Spyro collecting something.
 #[derive(Gui, Clone, Copy)]
 pub enum CollectableSplit {
     /// Never
     ///
-    /// Never split upon the item's collection (default).
+    /// Never split upon collection (default).
     Never,
 
     /// OnCategoryRequirement
@@ -45,8 +46,10 @@ pub enum CollectableSplit {
     EveryCollection,
 }
 
-/// Settings one can edit via GUI (where supported) or by editing a split XML file directly.
-/// Any enabled level splits will occur upon exiting a level, not upon entry.
+/// Settings one can edit via GUI (where supported) or by editing a `.lss` file directly.
+///
+/// Settings to do with splitting levels (i.e. Artisans, Metropolis, etc.) are settings for
+/// the action to take when *exiting* a level, not entering one. More info for these in [`Split`].
 #[derive(Gui)]
 pub struct Settings {
     /// General
