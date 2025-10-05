@@ -17,5 +17,11 @@ jobs:
       - name: Install Rust
         uses: ./.github/actions/rust
 
-      - name: Check
+      - name: Check Build
         run: cargo check
+      
+      - name: Check Formatting
+        run: fmt --all -- --check
+      
+      - name: Run Clippy
+        run: clippy -- -D warnings
