@@ -38,3 +38,8 @@ jobs:
       
       - name: Build
         run: cargo b --release
+      
+      - name: Upload WASM File
+        uses: actions/upload-artifact@v4
+        with:
+          path: target/wasm32-unknown-unknown/release/spyro_rt_autosplitter.wasm
