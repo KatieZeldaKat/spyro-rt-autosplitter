@@ -1,0 +1,51 @@
+name: Rust
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  tests:
+    name: Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Commit
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: ./.github/actions/rust
+
+      - name: Check Build
+        run: cargo check
+      
+      - name: Check Formatting
+        run: cargo fmt --all -- --check
+      
+      - name: Run Clippy
+        run: cargo clippy -- -D warnings
+      
+      - name: Add Linux Target
+        run: rustup target add x86_64-unknown-linux-gnu
+      
+      - name: Run Cargo Tests
+        run: cd spyro_rt_utils && cargo test --target=x86_64-unknown-linux-gnu
+  build:
+    name: Build
+    needs: tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Commit
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: ./.github/actions/rust
+      
+      - name: Build
+        run: cargo b --release
+      
+      - name: Upload WASM File
+        uses: actions/upload-artifact@v4
+        with:
+          path: target/wasm32-unknown-unknown/release/spyro_rt_autosplitter.wasm
