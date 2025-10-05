@@ -1,0 +1,11 @@
+name: Install Rust
+description: Install Rust 1.88.0 with wasm32
+runs:
+  using: "composite"
+  steps:
+    - name: Install Rust 1.88.0
+      uses: docker://rust:1.88.0
+
+    - name: Add wasm32
+      run: rustup target add wasm32-unknown-unknown
+      shell: bash
