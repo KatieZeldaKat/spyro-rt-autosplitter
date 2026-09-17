@@ -1,3 +1,5 @@
+//! The primary bosses that end an Any% run.
+
 use super::{Memory, level::Level};
 #[cfg(debug_assertions)]
 use asr::timer;
@@ -11,7 +13,7 @@ pub enum Boss {
     SorceressSbr,
 }
 
-/// Extracts and caches information about bosses' health.
+/// Extracts and caches information about [`Boss`]' health.
 #[derive(Default)]
 pub struct BossReader {
     current_level: Option<Level>,
@@ -22,7 +24,7 @@ pub struct BossReader {
 }
 
 impl BossReader {
-    /// Updates the health of the current boss (if there is one).
+    /// Updates the health of the current [`Boss`] (if there is one).
     /// This should only be called by [`Memory`].
     pub fn update(&mut self, process: &Process, address: Address, current_level: Level) {
         self.current_level = Some(current_level);

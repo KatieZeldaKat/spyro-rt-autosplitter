@@ -23,6 +23,7 @@ impl Splitter {
 
         self.split_on_level_transition(memory, settings);
         self.split_on_boss_defeated(memory, settings);
+        Self::split_on_collectible_earned(memory, settings);
     }
 
     fn reset(&mut self) {
@@ -57,6 +58,14 @@ impl Splitter {
             if should_split {
                 timer::split();
             }
+        }
+    }
+
+    fn split_on_collectible_earned(memory: &Memory, settings: &Settings) {
+        if let Some(collectible) = memory.collectible_reader().collectible_earned()
+            && settings.get_split_on_collectible(collectible)
+        {
+            timer::split();
         }
     }
 

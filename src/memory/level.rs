@@ -1,3 +1,5 @@
+//! Levels (or maps) that load during gameplay.
+
 use super::Memory;
 #[cfg(debug_assertions)]
 use asr::timer;

@@ -1,7 +1,10 @@
 //! Settings for the auto-splitter that can be modified in `LiveSplit`.
 
-use crate::memory::{boss::Boss, level::Level};
+use crate::memory::{boss::Boss, collectible::Collectible, level::Level};
 use asr::settings::gui::{Gui, Title};
+
+const DRAGON_CATEGORY_REQUIREMENT: u8 = 80;
+const EGG_CATEGORY_REQUIREMENT: u8 = 149;
 
 /// Defines when the timer should split when exiting a [`Level`].
 #[derive(Gui)]
@@ -43,12 +46,38 @@ pub enum BossDefeat {
     Always,
 }
 
+/// Defines when the timer should split when earning a [`Collectible`].
+#[derive(Gui)]
+enum CollectibleEarned {
+    /// Never
+    ///
+    /// Never split on collectible earned.
+    #[default]
+    Never,
+
+    /// Category
+    ///
+    /// Split on based on the category's requirements:
+    ///
+    /// - Spyro the Dragon -> 80 Dragons
+    /// - Spyro: Year of the Dragon -> 149 Eggs
+    Category,
+
+    /// Always
+    ///
+    /// Always split on collectible earned.
+    Always,
+}
+
 /// Defines all possible settings for the auto-splitter.
 #[derive(Gui)]
 pub struct Settings {
     /// Spyro 1
     #[heading_level = 0]
     _title_s1: Title,
+
+    /// Split on Dragon Rescued
+    dragon_rescued: CollectibleEarned,
 
     /// Split on Level Exit
     #[heading_level = 1]
@@ -249,6 +278,9 @@ pub struct Settings {
     #[heading_level = 0]
     _title_s3: Title,
 
+    /// Split on Egg Rescued
+    egg_rescued: CollectibleEarned,
+
     /// Split on Sorceress Lair Defeat
     sorceress_lair_defeated: BossDefeat,
 
@@ -360,6 +392,23 @@ pub struct Settings {
 }
 
 impl Settings {
+    /// Takes a [`Collectible`] and returns `true` if the timer should split, `false` otherwise.
+    #[must_use]
+    pub const fn get_split_on_collectible(&self, collectible: Collectible) -> bool {
+        match collectible {
+            Collectible::Dragon(dragon_count) => match self.dragon_rescued {
+                CollectibleEarned::Never => false,
+                CollectibleEarned::Category => dragon_count == DRAGON_CATEGORY_REQUIREMENT,
+                CollectibleEarned::Always => true,
+            },
+            Collectible::Egg(egg_count) => match self.egg_rescued {
+                CollectibleEarned::Never => false,
+                CollectibleEarned::Category => egg_count == EGG_CATEGORY_REQUIREMENT,
+                CollectibleEarned::Always => true,
+            },
+        }
+    }
+
     /// Takes a [`Boss`] and returns its corresponding [`BossDefeat`] setting.
     #[must_use]
     pub const fn get_boss_defeat_setting(&self, boss: Boss) -> &BossDefeat {
