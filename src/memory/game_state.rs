@@ -61,6 +61,12 @@ impl GameStateReader {
         }
     }
 
+    /// Returns the current [`GameState`].
+    #[must_use]
+    pub fn game_state(&self) -> GameState {
+        self.game_state.pair.unwrap_or_default().current
+    }
+
     /// Returns the [`GameState`] if it has just changed, [`None`] otherwise.
     #[must_use]
     pub fn game_state_changed(&self) -> Option<GameState> {

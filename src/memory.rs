@@ -7,7 +7,7 @@ pub mod level;
 
 use boss::BossReader;
 use collectible::CollectibleReader;
-use game_state::GameStateReader;
+use game_state::{GameState, GameStateReader};
 use level::LevelReader;
 
 use asr::{Address, Process};
@@ -27,11 +27,13 @@ impl Memory {
     /// This method should be called every tick.
     pub fn update(&mut self, process: &Process, address: Address) {
         self.game_state.update(process, address);
-        self.level.update(process, address);
-        if let Some(current_level) = self.level.current_level() {
-            self.boss.update(process, address, current_level);
+        if self.game_state.game_state() == GameState::InControl {
+            self.level.update(process, address);
+            self.collectible.update(process, address);
+            if let Some(current_level) = self.level.current_level() {
+                self.boss.update(process, address, current_level);
+            }
         }
-        self.collectible.update(process, address);
     }
 
     /// Gets the [`BossReader`] in memory.
