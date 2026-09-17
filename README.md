@@ -6,9 +6,9 @@ A cross-platform auto-splitter for Spyro: Reignited Trilogy.
 
 First, download the `spyro-rt-autosplitter.wasm` file from the [Latest Release](https://github.com/KatieZeldaKat/spyro-rt-autosplitter/releases/latest). Since this utilizes `livesplit-core` functionality, you can choose from a few different timing methods. These are the ones that are recommended:
 
-- [LiveSplit](https://github.com/KatieZeldaKat/spyro-rt-autosplitter/wiki/LiveSplit-Setup) (Windows Only)
+- [LiveSplit](doc/livesplit-setup.md) (Windows Only)
     - Harder to set up, but easier to edit settings
-- [LiveSplit One Druid](https://github.com/KatieZeldaKat/spyro-rt-autosplitter/wiki/LiveSplit-One-Druid-Setup)
+- [LiveSplit One Druid](doc/livesplit-druid-setup.md)
     - Easier to set up, but harder to edit settings
 
 ## Compilation
