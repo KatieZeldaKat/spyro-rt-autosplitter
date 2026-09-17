@@ -10,20 +10,20 @@ jobs:
   fmt:
     runs-on: ubuntu-latest
     steps:
+    - uses: actions/checkout@v5
     - name: Format
-      uses: actions/checkout@v5
       run: cargo fmt --check
   clippy:
     runs-on: ubuntu-latest
     steps:
+    - uses: actions/checkout@v5
     - name: Clippy
-      uses: actions/checkout@v5
       run: cargo clippy
   build:
     runs-on: ubuntu-latest
     steps:
+    - uses: actions/checkout@v5
     - name: Install Web Assembly Target
-      uses: actions/checkout@v5
       run: rustup target add wasm32-unknown-unknown
 
     - name: Build
