@@ -19,7 +19,6 @@ pub async fn main() {
     loop {
         let process = Process::wait_attach(EXE_NAME).await;
         if let Ok(address) = process.get_module_address(EXE_NAME) {
-            timer::start();
             let mut memory = Memory::default();
             let mut splitter = Splitter::default();
 

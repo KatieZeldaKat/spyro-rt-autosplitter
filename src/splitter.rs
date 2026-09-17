@@ -1,13 +1,24 @@
 use crate::{
-    memory::{Memory, boss::Boss, level::Level},
+    memory::{Memory, boss::Boss, game_state::GameState, level::Level},
     settings::{BossDefeat, LevelExit, Settings},
 };
 use asr::timer::{self, TimerState};
 use std::collections::HashSet;
 
+trait TimerActive {
+    fn active(&self) -> bool;
+}
+
+impl TimerActive for TimerState {
+    fn active(&self) -> bool {
+        *self == Self::Running || *self == Self::Paused
+    }
+}
+
 /// Performs actions on the timer, such as starting, resetting, and splitting.
 #[derive(Default)]
 pub struct Splitter {
+    game_state: GameState,
     levels_exited: HashSet<Level>,
     bosses_defeated: HashSet<Boss>,
 }
@@ -16,7 +27,8 @@ impl Splitter {
     /// Updates the state of the auto-splitter, mutating the timer if necessary.
     /// This method should be called every tick.
     pub fn update(&mut self, memory: &Memory, settings: &Settings) {
-        if !Self::timer_running() {
+        self.update_game_state(memory, settings);
+        if !timer::state().active() {
             self.reset();
             return;
         }
@@ -31,6 +43,24 @@ impl Splitter {
         self.bosses_defeated.clear();
     }
 
+    fn update_game_state(&mut self, memory: &Memory, settings: &Settings) {
+        if let Some(game_state) = memory.game_state_reader().game_state_changed() {
+            self.game_state = game_state;
+            match game_state {
+                GameState::TitleScreen => {
+                    if settings.reset_on_title() {
+                        timer::reset();
+                    }
+                }
+                GameState::GameLoading => {
+                    timer::start();
+                    timer::pause_game_time();
+                }
+                GameState::InControl => timer::resume_game_time(),
+            }
+        }
+    }
+
     fn split_on_level_transition(&mut self, memory: &Memory, settings: &Settings) {
         if let Some(transition) = memory.level_reader().level_changed() {
             let first_time_exited = self.levels_exited.insert(transition.from());
@@ -42,6 +72,9 @@ impl Splitter {
 
             if should_split {
                 timer::split();
+
+                #[cfg(debug_assertions)]
+                asr::print_message("Split on level transition.");
             }
         }
     }
@@ -57,6 +90,9 @@ impl Splitter {
 
             if should_split {
                 timer::split();
+
+                #[cfg(debug_assertions)]
+                asr::print_message("Split on boss defeated.");
             }
         }
     }
@@ -66,10 +102,9 @@ impl Splitter {
             && settings.get_split_on_collectible(collectible)
         {
             timer::split();
-        }
-    }
 
-    fn timer_running() -> bool {
-        timer::state() == TimerState::Running || timer::state() == TimerState::Paused
+            #[cfg(debug_assertions)]
+            asr::print_message("Split on collectible earned.");
+        }
     }
 }

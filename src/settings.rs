@@ -59,8 +59,8 @@ enum CollectibleEarned {
     ///
     /// Split on based on the category's requirements:
     ///
-    /// - Spyro the Dragon -> 80 Dragons
-    /// - Spyro: Year of the Dragon -> 149 Eggs
+    /// - Spyro the Dragon → 80 Dragons
+    /// - Spyro: Year of the Dragon → 149 Eggs
     Category,
 
     /// Always
@@ -72,6 +72,13 @@ enum CollectibleEarned {
 /// Defines all possible settings for the auto-splitter.
 #[derive(Gui)]
 pub struct Settings {
+    /// General
+    #[heading_level = 0]
+    _title_s0: Title,
+
+    /// Reset on Title Screen
+    reset_on_title: bool,
+
     /// Spyro 1
     #[heading_level = 0]
     _title_s1: Title,
@@ -392,6 +399,12 @@ pub struct Settings {
 }
 
 impl Settings {
+    /// Returns `true` if the timer should reset on the title screen, `false` otherwise.
+    #[must_use]
+    pub const fn reset_on_title(&self) -> bool {
+        self.reset_on_title
+    }
+
     /// Takes a [`Collectible`] and returns `true` if the timer should split, `false` otherwise.
     #[must_use]
     pub const fn get_split_on_collectible(&self, collectible: Collectible) -> bool {
