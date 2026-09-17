@@ -4,11 +4,13 @@ pub mod boss;
 pub mod collectible;
 pub mod game_state;
 pub mod level;
+pub mod loading;
 
 use boss::BossReader;
 use collectible::CollectibleReader;
 use game_state::{GameState, GameStateReader};
 use level::LevelReader;
+use loading::LoadStateReader;
 
 use asr::{Address, Process};
 use bytemuck::Pod;
@@ -20,6 +22,7 @@ pub struct Memory {
     collectible: CollectibleReader,
     game_state: GameStateReader,
     level: LevelReader,
+    load_state: LoadStateReader,
 }
 
 impl Memory {
@@ -27,6 +30,8 @@ impl Memory {
     /// This method should be called every tick.
     pub fn update(&mut self, process: &Process, address: Address) {
         self.game_state.update(process, address);
+        self.load_state
+            .update(process, address, self.game_state.game_state());
         if self.game_state.game_state() == GameState::InControl {
             self.level.update(process, address);
             self.collectible.update(process, address);
@@ -58,6 +63,12 @@ impl Memory {
     #[must_use]
     pub const fn level_reader(&self) -> &LevelReader {
         &self.level
+    }
+
+    /// Gets the [`LoadStateReader`] in memory.
+    #[must_use]
+    pub const fn load_state_reader(&self) -> &LoadStateReader {
+        &self.load_state
     }
 
     fn read<T: Pod>(process: &Process, address: Address, path: &[u64]) -> Option<T> {

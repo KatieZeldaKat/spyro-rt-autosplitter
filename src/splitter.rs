@@ -1,5 +1,5 @@
 use crate::{
-    memory::{Memory, boss::Boss, game_state::GameState, level::Level},
+    memory::{Memory, boss::Boss, game_state::GameState, level::Level, loading::LoadState},
     settings::{BossDefeat, LevelExit, Settings},
 };
 use asr::timer::{self, TimerState};
@@ -33,6 +33,7 @@ impl Splitter {
             return;
         }
 
+        Self::update_load_state(memory);
         self.split_on_level_transition(memory, settings);
         self.split_on_boss_defeated(memory, settings);
         Self::split_on_collectible_earned(memory, settings);
@@ -93,6 +94,15 @@ impl Splitter {
 
                 #[cfg(debug_assertions)]
                 asr::print_message("Split on boss defeated.");
+            }
+        }
+    }
+
+    fn update_load_state(memory: &Memory) {
+        if let Some(load_state) = memory.load_state_reader().load_state_changed() {
+            match load_state {
+                LoadState::Loading => timer::pause_game_time(),
+                LoadState::Done => timer::resume_game_time(),
             }
         }
     }
