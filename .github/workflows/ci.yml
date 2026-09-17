@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - 'main'
+
+jobs:
+  fmt:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Format
+      uses: actions/checkout@v5
+      run: cargo fmt --check
+  clippy:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Clippy
+      uses: actions/checkout@v5
+      run: cargo clippy
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Install Web Assembly Target
+      uses: actions/checkout@v5
+      run: rustup target add wasm32-unknown-unknown
+
+    - name: Build
+      run: cargo build --release --target=wasm32-unknown-unknown
+
+    - name: Upload WASM File
+      uses: actions/upload-artifact@v5
+      with:
+        path: target/wasm32-unknown-unknown/release/spyro_rt_autosplitter.wasm
