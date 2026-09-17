@@ -8,6 +8,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 asr = { git = "https://github.com/LiveSplit/asr", features = [ "alloc", "derive" ] }
+bytemuck = "1.x"
 
 # Thanks to https://www.namtao.com/rust#strict-lints
 [lints.clippy]
@@ -25,3 +26,5 @@ panic_in_result_fn = "deny"
 panic = "deny"
 exit = "deny"
 as_conversions = "deny"
+# Necessary for `asr` crate
+useless_let_if_seq = "allow"

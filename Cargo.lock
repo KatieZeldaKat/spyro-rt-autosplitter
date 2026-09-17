@@ -98,6 +98,7 @@ name = "spyro-rt-autosplitter"
 version = "0.2.0"
 dependencies = [
  "asr",
+ "bytemuck",
 ]
 
 [[package]]
