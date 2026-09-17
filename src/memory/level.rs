@@ -1,18 +1,35 @@
 use super::Memory;
-use asr::{string::ArrayWString, timer, watcher::Watcher, Address, Process};
+#[cfg(debug_assertions)]
+use asr::timer;
+use asr::{Address, Process, string::ArrayWString, watcher::Watcher};
 
+/// Extracts and caches information about what [`Level`]s Spyro has visited.
 #[derive(Default)]
 pub struct LevelReader {
     level: Watcher<Level>,
 }
 
 impl LevelReader {
+    /// Updates the current [`Level`].
+    /// This should only be called by [`Memory`].
     pub fn update(&mut self, process: &Process, address: Address) {
         if let Some(level) = Self::read_level(process, address) {
             self.level.update_infallible(level);
         }
     }
 
+    /// The current [`Level`] Spyro is in, if any.
+    #[must_use]
+    pub fn current_level(&self) -> Option<Level> {
+        Some(self.level.pair?.current)
+    }
+
+    /// Returns a [`LevelTransition`] if one has just occurred, [`None`] otherwise.
+    ///
+    /// Note that some level transitions are considered invalid. These transitions will
+    /// never return a value and always return [`None`]. See the source code of [`LevelTransition`]
+    /// for more details.
+    #[must_use]
     pub fn level_changed(&self) -> Option<LevelTransition> {
         let pair = self.level.pair?;
         LevelTransition::try_new(pair.old, pair.current)
@@ -41,15 +58,23 @@ impl LevelReader {
     }
 }
 
+/// Represents the current [`Level`] changing in memory.
 pub struct LevelTransition {
-    pub from: Level,
+    from: Level,
 }
 
 impl LevelTransition {
+    /// The [`Level`] that was just exited from.
+    #[must_use]
+    pub const fn from(&self) -> Level {
+        self.from
+    }
+
     fn try_new(from: Level, to: Level) -> Option<Self> {
         Self::is_valid(from, to).then_some(Self { from })
     }
 
+    /// Checks that the transition is a proper one given level storage and other shenanigans.
     fn is_valid(from: Level, to: Level) -> bool {
         match from {
             Level::Artisans => to == Level::PeaceKeepers,
@@ -65,6 +90,7 @@ impl LevelTransition {
     }
 }
 
+/// The levels in the game Spyro can visit.
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Level {
     Artisans,
@@ -173,7 +199,9 @@ pub enum Level {
 }
 
 impl Level {
+    /// Parses the string representation found in memory into a [`Level`] that's easier to use.
     #[expect(clippy::too_many_lines, reason = "Needs to include all Spyro levels.")]
+    #[must_use]
     pub fn from_memory(map_path: &str) -> Option<Self> {
         match map_path {
             "/LS101_ArtisansHome/Maps/" => Some(Self::Artisans),

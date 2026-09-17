@@ -1,6 +1,9 @@
-use crate::Level;
+//! Settings for the auto-splitter that can be modified in `LiveSplit`.
+
+use crate::memory::{boss::Boss, level::Level};
 use asr::settings::gui::{Gui, Title};
 
+/// Defines when the timer should split when exiting a [`Level`].
 #[derive(Gui)]
 pub enum LevelExit {
     /// Never
@@ -20,6 +23,27 @@ pub enum LevelExit {
     Always,
 }
 
+/// Defines when the timer should split when defeating a [`Boss`].
+#[derive(Gui)]
+pub enum BossDefeat {
+    /// Never
+    ///
+    /// Never split on boss defeat.
+    Never,
+
+    /// First Defeat
+    ///
+    /// Split only the first time defeating the boss.
+    #[default]
+    FirstDefeat,
+
+    /// Always
+    ///
+    /// Always split on boss defeat.
+    Always,
+}
+
+/// Defines all possible settings for the auto-splitter.
 #[derive(Gui)]
 pub struct Settings {
     /// Spyro 1
@@ -136,6 +160,9 @@ pub struct Settings {
     #[heading_level = 0]
     _title_s2: Title,
 
+    /// Split on Ripto Defeat
+    ripto_defeated: BossDefeat,
+
     /// Split on Level Exit
     #[heading_level = 1]
     _title_s2_exit: Title,
@@ -221,6 +248,12 @@ pub struct Settings {
     /// Spyro 3
     #[heading_level = 0]
     _title_s3: Title,
+
+    /// Split on Sorceress Lair Defeat
+    sorceress_lair_defeated: BossDefeat,
+
+    /// Split on Sorceress SBR Defeat
+    sorceress_sbr_defeated: BossDefeat,
 
     /// Split on Level Exit
     #[heading_level = 1]
@@ -327,7 +360,23 @@ pub struct Settings {
 }
 
 impl Settings {
+    /// Takes a [`Boss`] and returns its corresponding [`BossDefeat`] setting.
+    #[must_use]
+    pub const fn get_boss_defeat_setting(&self, boss: Boss) -> &BossDefeat {
+        match boss {
+            Boss::Ripto => &self.ripto_defeated,
+            Boss::SorceressLair => &self.sorceress_lair_defeated,
+            Boss::SorceressSbr => &self.sorceress_sbr_defeated,
+        }
+    }
+
+    /// Takes a [`Level`] and returns its corresponding [`LevelExit`] setting.
+    ///
+    /// Note that not all [`Level`]s are included, and some are restricted to only split
+    /// on valid transitions. See the source code of
+    /// [`LevelTransition`](crate::memory::level::LevelTransition) for more info.
     #[expect(clippy::too_many_lines, reason = "Needs to include all Spyro levels.")]
+    #[must_use]
     pub const fn get_level_exit_setting(&self, level: Level) -> &LevelExit {
         match level {
             Level::Artisans => &self.artisans,

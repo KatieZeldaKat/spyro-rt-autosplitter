@@ -1,15 +1,18 @@
-mod memory;
-mod settings;
+pub mod memory;
+pub mod settings;
 mod splitter;
 
-use asr::{future as asr_future, settings::Gui, timer, Process};
-use memory::{Level, Memory};
+use memory::Memory;
 use settings::Settings;
-use splitter::Splitter;
+pub use splitter::Splitter;
+
+use asr::{Process, future as asr_future, settings::Gui, timer};
 
 const EXE_NAME: &str = "Spyro-Win64-Shipping.exe";
 
 asr::async_main!(stable);
+
+/// The entry point to the auto-splitter.
 pub async fn main() {
     let mut settings = Settings::register();
 
