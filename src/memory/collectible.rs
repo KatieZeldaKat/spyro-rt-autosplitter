@@ -1,6 +1,6 @@
 //! The primary objectives in Spyro.
 
-use super::{Memory, game_state::Game};
+use super::{Memory, PointerPaths, game_state::Game};
 #[cfg(debug_assertions)]
 use asr::timer;
 use asr::{Address, Process, watcher::Watcher};
@@ -29,18 +29,24 @@ pub struct CollectibleReader {
 impl CollectibleReader {
     /// Updates the number of [`Collectible`]s earned for the current game.
     /// This should only be called by [`Memory`].
-    pub fn update(&mut self, process: &Process, address: Address, game: Option<Game>) {
+    pub fn update(
+        &mut self,
+        process: &Process,
+        address: Address,
+        paths: &PointerPaths,
+        game: Option<Game>,
+    ) {
         self.game = game;
         if let Some(game) = game {
             match game {
                 Game::Spyro1 => {
-                    if let Some(dragon_count) = Self::read_dragon_count(process, address) {
+                    if let Some(dragon_count) = Self::read_dragon_count(process, address, paths) {
                         self.dragon_count.update_infallible(dragon_count);
                     }
                 }
                 Game::Spyro2 => (),
                 Game::Spyro3 => {
-                    if let Some(egg_count) = Self::read_egg_count(process, address) {
+                    if let Some(egg_count) = Self::read_egg_count(process, address, paths) {
                         self.egg_count.update_infallible(egg_count);
                     }
                 }
@@ -66,9 +72,8 @@ impl CollectibleReader {
         }
     }
 
-    fn read_dragon_count(process: &Process, address: Address) -> Option<u8> {
-        let path = &[0x0341_60D0, 0x28, 0x20, 0x100, 0x8, 0x30, 0x27C];
-        let dragon_count = Memory::read::<u8>(process, address, path)?;
+    fn read_dragon_count(process: &Process, address: Address, paths: &PointerPaths) -> Option<u8> {
+        let dragon_count = Memory::read::<u8>(process, address, &paths.dragon_count)?;
 
         #[cfg(debug_assertions)]
         timer::set_variable("dragon_count", &dragon_count.to_string());
@@ -76,9 +81,8 @@ impl CollectibleReader {
         Some(dragon_count)
     }
 
-    fn read_egg_count(process: &Process, address: Address) -> Option<u8> {
-        let path = &[0x0341_60D0, 0x28, 0x20, 0x100, 0x8, 0x30, 0x28C];
-        let egg_count = Memory::read::<u8>(process, address, path)?;
+    fn read_egg_count(process: &Process, address: Address, paths: &PointerPaths) -> Option<u8> {
+        let egg_count = Memory::read::<u8>(process, address, &paths.egg_count)?;
 
         #[cfg(debug_assertions)]
         timer::set_variable("egg_count", &egg_count.to_string());

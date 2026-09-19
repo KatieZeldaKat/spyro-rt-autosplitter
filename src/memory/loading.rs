@@ -1,6 +1,6 @@
 //! When the game is loading and the player isn't in a menu.
 
-use super::{Memory, game_state::GameState};
+use super::{Memory, PointerPaths, game_state::GameState};
 #[cfg(debug_assertions)]
 use asr::timer;
 use asr::{Address, Process, watcher::Watcher};
@@ -22,13 +22,19 @@ pub struct LoadStateReader {
 impl LoadStateReader {
     /// Updates what [`LoadState`] the game is in.
     /// This should only be called by [`Memory`].
-    pub fn update(&mut self, process: &Process, address: Address, game_state: GameState) {
+    pub fn update(
+        &mut self,
+        process: &Process,
+        address: Address,
+        paths: &PointerPaths,
+        game_state: GameState,
+    ) {
         let event = match game_state {
             GameState::TitleScreen => LoadState::Done,
             GameState::GameLoading | GameState::InControl => {
-                if Self::read_in_menu(process, address) {
+                if Self::read_in_menu(process, address, paths) {
                     LoadState::Done
-                } else if Self::read_loading(process, address) {
+                } else if Self::read_loading(process, address, paths) {
                     LoadState::Loading
                 } else {
                     LoadState::Done
@@ -46,9 +52,8 @@ impl LoadStateReader {
         state.changed().then_some(state.current)
     }
 
-    fn read_loading(process: &Process, address: Address) -> bool {
-        let path = &[0x0341_5F30, 0xF8, 0x4A8, 0xE19];
-        let loading = Memory::read::<u8>(process, address, path).unwrap_or_default() == 0;
+    fn read_loading(process: &Process, address: Address, paths: &PointerPaths) -> bool {
+        let loading = Memory::read::<u8>(process, address, &paths.loading).unwrap_or_default() == 0;
 
         #[cfg(debug_assertions)]
         timer::set_variable("loading", &loading.to_string());
@@ -56,9 +61,8 @@ impl LoadStateReader {
         loading
     }
 
-    fn read_in_menu(process: &Process, address: Address) -> bool {
-        let path = &[0x0341_60D0, 0x20, 0x218, 0x60];
-        let in_menu = Memory::read::<u8>(process, address, path).unwrap_or_default() > 0;
+    fn read_in_menu(process: &Process, address: Address, paths: &PointerPaths) -> bool {
+        let in_menu = Memory::read::<u8>(process, address, &paths.in_menu).unwrap_or_default() > 0;
 
         #[cfg(debug_assertions)]
         timer::set_variable("in_menu", &in_menu.to_string());

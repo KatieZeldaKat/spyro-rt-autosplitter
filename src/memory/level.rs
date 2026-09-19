@@ -1,6 +1,6 @@
 //! Levels (or maps) that load during gameplay.
 
-use super::Memory;
+use super::{Memory, PointerPaths};
 #[cfg(debug_assertions)]
 use asr::timer;
 use asr::{Address, Process, string::ArrayWString, watcher::Watcher};
@@ -14,8 +14,8 @@ pub struct LevelReader {
 impl LevelReader {
     /// Updates the current [`Level`].
     /// This should only be called by [`Memory`].
-    pub fn update(&mut self, process: &Process, address: Address) {
-        if let Some(level) = Self::read_level(process, address) {
+    pub fn update(&mut self, process: &Process, address: Address, paths: &PointerPaths) {
+        if let Some(level) = Self::read_level(process, address, paths) {
             self.level.update_infallible(level);
         }
     }
@@ -37,26 +37,14 @@ impl LevelReader {
         LevelTransition::try_new(pair.old, pair.current)
     }
 
-    fn read_level(process: &Process, address: Address) -> Option<Level> {
-        let path: &[u64] = &[
-            0x0341_5F30,
-            0x138,
-            0xB0,
-            0xB0,
-            0x598,
-            0x210,
-            0xB8,
-            0x148,
-            0x190,
-            0x0,
-        ];
-        let map_path = Memory::read::<ArrayWString<256>>(process, address, path)?;
-        let map_path = String::from_utf16(&map_path).ok()?;
+    fn read_level(process: &Process, address: Address, paths: &PointerPaths) -> Option<Level> {
+        let level_path = Memory::read::<ArrayWString<256>>(process, address, &paths.level)?;
+        let level_path = String::from_utf16(&level_path).ok()?;
 
         #[cfg(debug_assertions)]
-        timer::set_variable("map_path", &map_path);
+        timer::set_variable("level_path", &level_path);
 
-        Level::from_memory(&map_path)
+        Level::from_memory(&level_path)
     }
 }
 

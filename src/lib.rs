@@ -2,7 +2,7 @@ pub mod memory;
 pub mod settings;
 mod splitter;
 
-use memory::Memory;
+use memory::{GameVersion, Memory, PointerPaths};
 use settings::Settings;
 pub use splitter::Splitter;
 
@@ -21,7 +21,10 @@ pub async fn main() {
 
     loop {
         let process = Process::wait_attach(EXE_NAME).await;
-        if let Ok(address) = process.get_module_address(EXE_NAME) {
+        if let Ok((address, module_size)) = process.get_module_range(EXE_NAME) {
+            let game_version = GameVersion::from_module_size(module_size).unwrap_or_default();
+            let paths = PointerPaths::from(game_version);
+
             let mut memory = Memory::default();
             let mut splitter = Splitter::default();
 
@@ -29,7 +32,7 @@ pub async fn main() {
                 .until_closes(async {
                     loop {
                         settings.update();
-                        memory.update(&process, address);
+                        memory.update(&process, address, &paths);
                         splitter.update(&memory, &settings);
 
                         asr_future::next_tick().await;

@@ -1,6 +1,6 @@
 //! Going from the title screen to being in control of Spyro.
 
-use super::Memory;
+use super::{Memory, PointerPaths};
 #[cfg(debug_assertions)]
 use asr::timer;
 use asr::{Address, Process, watcher::Watcher};
@@ -43,7 +43,7 @@ pub struct GameStateReader {
 impl GameStateReader {
     /// Updates what [`GameState`] the game is in.
     /// This should only be called by [`Memory`].
-    pub fn update(&mut self, process: &Process, address: Address) {
+    pub fn update(&mut self, process: &Process, address: Address, paths: &PointerPaths) {
         let game_state = self.game_state.pair.get_or_insert_default().current;
         match game_state {
             GameState::TitleScreen => {
@@ -56,12 +56,12 @@ impl GameStateReader {
                     &on_title.clone()
                 } else {
                     self.on_title
-                        .update_infallible(Self::read_on_title(process, address))
+                        .update_infallible(Self::read_on_title(process, address, paths))
                 };
 
                 // We only transition to `GameLoading` if we went from the title screen to the game.
                 if on_title.changed_to(&false)
-                    && let Some(game) = Self::read_game(process, address)
+                    && let Some(game) = Self::read_game(process, address, paths)
                 {
                     self.game = Some(game);
                     self.on_title.update_infallible(false);
@@ -71,14 +71,14 @@ impl GameStateReader {
                 }
             }
             GameState::GameLoading => {
-                if Self::read_in_control(process, address) {
+                if Self::read_in_control(process, address, paths) {
                     self.game_state.update_infallible(GameState::InControl);
                 } else {
                     self.game_state.update_infallible(GameState::GameLoading);
                 }
             }
             GameState::InControl => {
-                if Self::read_on_title(process, address) {
+                if Self::read_on_title(process, address, paths) {
                     self.game = None;
                     self.game_state.update_infallible(GameState::TitleScreen);
                 } else {
@@ -107,9 +107,9 @@ impl GameStateReader {
         state.changed().then_some(state.current)
     }
 
-    fn read_on_title(process: &Process, address: Address) -> bool {
-        let path = &[0x0341_5F30, 0xF0, 0x378, 0x564];
-        let on_title = Memory::read::<u8>(process, address, path).unwrap_or_default() == 0;
+    fn read_on_title(process: &Process, address: Address, paths: &PointerPaths) -> bool {
+        let on_title =
+            Memory::read::<u8>(process, address, &paths.on_title).unwrap_or_default() == 0;
 
         #[cfg(debug_assertions)]
         timer::set_variable("on_title", &on_title.to_string());
@@ -117,9 +117,8 @@ impl GameStateReader {
         on_title
     }
 
-    fn read_game(process: &Process, address: Address) -> Option<Game> {
-        let path = &[0x0341_5F30, 0xF8, 0x290, 0x0, 0x1F8];
-        let game = Memory::read::<u8>(process, address, path)?;
+    fn read_game(process: &Process, address: Address, paths: &PointerPaths) -> Option<Game> {
+        let game = Memory::read::<u8>(process, address, &paths.game)?;
 
         #[cfg(debug_assertions)]
         timer::set_variable("game", &game.to_string());
@@ -132,9 +131,9 @@ impl GameStateReader {
         }
     }
 
-    fn read_in_control(process: &Process, address: Address) -> bool {
-        let path = &[0x0341_5F30, 0xF8, 0x478];
-        let in_control = Memory::read::<u8>(process, address, path).unwrap_or_default() > 0;
+    fn read_in_control(process: &Process, address: Address, paths: &PointerPaths) -> bool {
+        let in_control =
+            Memory::read::<u8>(process, address, &paths.in_control).unwrap_or_default() > 0;
 
         #[cfg(debug_assertions)]
         timer::set_variable("in_control", &in_control.to_string());
