@@ -20,9 +20,21 @@ pub enum GameState {
     InControl,
 }
 
+/// The three games included in the Reignited Trilogy.
+#[derive(Clone, Copy, Hash, PartialEq, Eq)]
+pub enum Game {
+    /// Spyro the Dragon
+    Spyro1,
+    /// Spyro 2: Ripto's Rage
+    Spyro2,
+    /// Spyro: Year of the Dragon
+    Spyro3,
+}
+
 /// Extracts and caches information about the [`GameState`].
 #[derive(Default)]
 pub struct GameStateReader {
+    game: Option<Game>,
     game_state: Watcher<GameState>,
 
     on_title: Watcher<bool>,
@@ -35,10 +47,24 @@ impl GameStateReader {
         let game_state = self.game_state.pair.get_or_insert_default().current;
         match game_state {
             GameState::TitleScreen => {
-                let on_title = self
-                    .on_title
-                    .update_infallible(Self::read_on_title(process, address));
-                if on_title.changed_to(&false) {
+                // It isn't guaranteed that we will know the game from the first frame `on_title`
+                // changes. Thus, we need to preserve the state of `on_title` changing to `false`
+                // until we can get a read on what game is currently being loaded.
+                let on_title = if let Some(on_title) = self.on_title.pair
+                    && on_title.changed_to(&false)
+                {
+                    &on_title.clone()
+                } else {
+                    self.on_title
+                        .update_infallible(Self::read_on_title(process, address))
+                };
+
+                // We only transition to `GameLoading` if we went from the title screen to the game.
+                if on_title.changed_to(&false)
+                    && let Some(game) = Self::read_game(process, address)
+                {
+                    self.game = Some(game);
+                    self.on_title.update_infallible(false);
                     self.game_state.update_infallible(GameState::GameLoading);
                 } else {
                     self.game_state.update_infallible(GameState::TitleScreen);
@@ -53,12 +79,19 @@ impl GameStateReader {
             }
             GameState::InControl => {
                 if Self::read_on_title(process, address) {
+                    self.game = None;
                     self.game_state.update_infallible(GameState::TitleScreen);
                 } else {
                     self.game_state.update_infallible(GameState::InControl);
                 }
             }
         }
+    }
+
+    /// Returns the current [`Game`] if in one, [`None`] if still on the title screen.
+    #[must_use]
+    pub const fn game(&self) -> Option<Game> {
+        self.game
     }
 
     /// Returns the current [`GameState`].
@@ -82,6 +115,21 @@ impl GameStateReader {
         timer::set_variable("on_title", &on_title.to_string());
 
         on_title
+    }
+
+    fn read_game(process: &Process, address: Address) -> Option<Game> {
+        let path = &[0x0341_5F30, 0xF8, 0x290, 0x0, 0x1F8];
+        let game = Memory::read::<u8>(process, address, path)?;
+
+        #[cfg(debug_assertions)]
+        timer::set_variable("game", &game.to_string());
+
+        match game {
+            1 => Some(Game::Spyro1),
+            2 => Some(Game::Spyro2),
+            3 => Some(Game::Spyro3),
+            _ => None,
+        }
     }
 
     fn read_in_control(process: &Process, address: Address) -> bool {

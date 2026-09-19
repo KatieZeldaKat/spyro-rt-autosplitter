@@ -25,8 +25,7 @@ impl LoadStateReader {
     pub fn update(&mut self, process: &Process, address: Address, game_state: GameState) {
         let event = match game_state {
             GameState::TitleScreen => LoadState::Done,
-            GameState::GameLoading => LoadState::Loading,
-            GameState::InControl => {
+            GameState::GameLoading | GameState::InControl => {
                 if Self::read_in_menu(process, address) {
                     LoadState::Done
                 } else if Self::read_loading(process, address) {

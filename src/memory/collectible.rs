@@ -1,6 +1,6 @@
 //! The primary objectives in Spyro.
 
-use super::Memory;
+use super::{Memory, game_state::Game};
 #[cfg(debug_assertions)]
 use asr::timer;
 use asr::{Address, Process, watcher::Watcher};
@@ -17,12 +17,6 @@ pub enum Collectible {
     Egg(u8),
 }
 
-#[derive(Clone, Copy)]
-enum Game {
-    Spyro1,
-    Spyro3,
-}
-
 /// Extracts and caches information about the games' [`Collectible`]s.
 #[derive(Default)]
 pub struct CollectibleReader {
@@ -35,15 +29,16 @@ pub struct CollectibleReader {
 impl CollectibleReader {
     /// Updates the number of [`Collectible`]s earned for the current game.
     /// This should only be called by [`Memory`].
-    pub fn update(&mut self, process: &Process, address: Address) {
-        self.game = Self::read_game(process, address);
-        if let Some(game) = &self.game {
+    pub fn update(&mut self, process: &Process, address: Address, game: Option<Game>) {
+        self.game = game;
+        if let Some(game) = game {
             match game {
                 Game::Spyro1 => {
                     if let Some(dragon_count) = Self::read_dragon_count(process, address) {
                         self.dragon_count.update_infallible(dragon_count);
                     }
                 }
+                Game::Spyro2 => (),
                 Game::Spyro3 => {
                     if let Some(egg_count) = Self::read_egg_count(process, address) {
                         self.egg_count.update_infallible(egg_count);
@@ -63,24 +58,11 @@ impl CollectibleReader {
                     .changed()
                     .then_some(Collectible::Dragon(dragons.current))
             }
+            Game::Spyro2 => None,
             Game::Spyro3 => {
                 let eggs = self.egg_count.pair?;
                 eggs.changed().then_some(Collectible::Egg(eggs.current))
             }
-        }
-    }
-
-    fn read_game(process: &Process, address: Address) -> Option<Game> {
-        let path = &[0x0341_5F30, 0xF8, 0x290, 0x0, 0x1F8];
-        let game = Memory::read::<u8>(process, address, path)?;
-
-        #[cfg(debug_assertions)]
-        timer::set_variable("game", &game.to_string());
-
-        match game {
-            1 => Some(Game::Spyro1),
-            3 => Some(Game::Spyro3),
-            _ => None,
         }
     }
 

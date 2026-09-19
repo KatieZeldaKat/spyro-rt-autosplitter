@@ -8,12 +8,15 @@ pub use splitter::Splitter;
 
 use asr::{Process, future as asr_future, settings::Gui, timer};
 
+const TICK_RATE: f64 = 30.0;
 const EXE_NAME: &str = "Spyro-Win64-Shipping.exe";
 
 asr::async_main!(stable);
 
 /// The entry point to the auto-splitter.
 pub async fn main() {
+    asr::set_tick_rate(TICK_RATE);
+
     let mut settings = Settings::register();
 
     loop {
