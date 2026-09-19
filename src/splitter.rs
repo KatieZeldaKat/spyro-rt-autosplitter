@@ -1,5 +1,11 @@
 use crate::{
-    memory::{Memory, boss::Boss, game_state::GameState, level::Level, loading::LoadState},
+    memory::{
+        Memory,
+        boss::Boss,
+        game_state::{Game, GameState},
+        level::Level,
+        loading::LoadState,
+    },
     settings::{BossDefeat, LevelExit, Settings},
 };
 use asr::timer::{self, TimerState};
@@ -19,6 +25,7 @@ impl TimerActive for TimerState {
 #[derive(Default)]
 pub struct Splitter {
     game_state: GameState,
+    games_entered: HashSet<Game>,
     levels_exited: HashSet<Level>,
     bosses_defeated: HashSet<Boss>,
 }
@@ -33,13 +40,14 @@ impl Splitter {
             return;
         }
 
-        Self::update_load_state(memory);
+        self.update_load_state(memory);
         self.split_on_level_transition(memory, settings);
         self.split_on_boss_defeated(memory, settings);
         Self::split_on_collectible_earned(memory, settings);
     }
 
     fn reset(&mut self) {
+        self.games_entered.clear();
         self.levels_exited.clear();
         self.bosses_defeated.clear();
     }
@@ -58,6 +66,24 @@ impl Splitter {
                     timer::pause_game_time();
                 }
                 GameState::InControl => timer::resume_game_time(),
+            }
+        }
+    }
+
+    fn update_load_state(&mut self, memory: &Memory) {
+        if let Some(load_state) = memory.load_state_reader().load_state_changed() {
+            match load_state {
+                LoadState::Loading => timer::pause_game_time(),
+                LoadState::Done => {
+                    // Resume the game time if we haven't entered our current game yet.
+                    if memory
+                        .game_state_reader()
+                        .game()
+                        .is_none_or(|game| !self.games_entered.insert(game))
+                    {
+                        timer::resume_game_time();
+                    }
+                }
             }
         }
     }
@@ -94,15 +120,6 @@ impl Splitter {
 
                 #[cfg(debug_assertions)]
                 asr::print_message("Split on boss defeated.");
-            }
-        }
-    }
-
-    fn update_load_state(memory: &Memory) {
-        if let Some(load_state) = memory.load_state_reader().load_state_changed() {
-            match load_state {
-                LoadState::Loading => timer::pause_game_time(),
-                LoadState::Done => timer::resume_game_time(),
             }
         }
     }

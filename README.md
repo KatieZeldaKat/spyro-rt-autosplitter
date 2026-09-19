@@ -46,20 +46,12 @@ The "Category" option for collectibles corresponds to those on the [Category Ext
 
 This auto-splitter is based on the [Auto Splitting Language (ASL) version](https://github.com/SirBorris/SpyroAutoSplit). To make the auto-splitter cross-platform, it needed to be entirely re-written using the Auto Splitting Runtime (ASR). In the process of this re-write, a few changes have been made.
 
-### Settings
-
 ASR allows for more setting customization than simple checkboxes. Thus, it has much fewer settings than the ASL version. Some settings have also been removed from the ASR version:
 
 - Ignore Fast Exits
     - This setting is removed in the ASR version due to a framework limitation. I suggest trying out the `FirstExit` and `Never` settings as a workaround, if possible.
 - Split on Ripto Enter
     - This setting is removed in the ASR version, since including it would increase code complexity for niche behavior.
-
-### Title to Game
-
-When going from the title screen to one of the three Spyro games, the game time is paused until the player gains control of Spyro. This behavior is present in the ASL version, but only for the first time that particular game is selected. ASR makes this happen *every* time the player goes from the title screen to a game.
-
-This behavior could potentially be reverted should it be deemed as too much of a deviation from the original.
 
 ## Compilation
 

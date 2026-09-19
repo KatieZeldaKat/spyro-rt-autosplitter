@@ -34,7 +34,8 @@ impl Memory {
             .update(process, address, self.game_state.game_state());
         if self.game_state.game_state() == GameState::InControl {
             self.level.update(process, address);
-            self.collectible.update(process, address);
+            self.collectible
+                .update(process, address, self.game_state.game());
             if let Some(current_level) = self.level.current_level() {
                 self.boss.update(process, address, current_level);
             }
