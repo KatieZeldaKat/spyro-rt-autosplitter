@@ -24,7 +24,6 @@ impl TimerActive for TimerState {
 /// Performs actions on the timer, such as starting, resetting, and splitting.
 #[derive(Default)]
 pub struct Splitter {
-    game_state: GameState,
     games_entered: HashSet<Game>,
     levels_exited: HashSet<Level>,
     bosses_defeated: HashSet<Boss>,
@@ -40,7 +39,7 @@ impl Splitter {
             return;
         }
 
-        self.update_load_state(memory);
+        Self::update_load_state(memory);
         self.split_on_level_transition(memory, settings);
         self.split_on_boss_defeated(memory, settings);
         Self::split_on_collectible_earned(memory, settings);
@@ -54,36 +53,28 @@ impl Splitter {
 
     fn update_game_state(&mut self, memory: &Memory, settings: &Settings) {
         if let Some(game_state) = memory.game_state_reader().game_state_changed() {
-            self.game_state = game_state;
             match game_state {
                 GameState::TitleScreen => {
                     if settings.reset_on_title() {
                         timer::reset();
                     }
                 }
-                GameState::GameLoading => {
-                    timer::start();
-                    timer::pause_game_time();
+                GameState::GameLoading(game) => {
+                    if self.games_entered.insert(game) {
+                        timer::start();
+                        timer::pause_game_time();
+                    }
                 }
-                GameState::InControl => timer::resume_game_time(),
+                GameState::InControl(_) => timer::resume_game_time(),
             }
         }
     }
 
-    fn update_load_state(&mut self, memory: &Memory) {
+    fn update_load_state(memory: &Memory) {
         if let Some(load_state) = memory.load_state_reader().load_state_changed() {
             match load_state {
                 LoadState::Loading => timer::pause_game_time(),
-                LoadState::Done => {
-                    // Resume the game time if we haven't entered our current game yet.
-                    if memory
-                        .game_state_reader()
-                        .game()
-                        .is_none_or(|game| !self.games_entered.insert(game))
-                    {
-                        timer::resume_game_time();
-                    }
-                }
+                LoadState::Done => timer::resume_game_time(),
             }
         }
     }
@@ -125,7 +116,8 @@ impl Splitter {
     }
 
     fn split_on_collectible_earned(memory: &Memory, settings: &Settings) {
-        if let Some(collectible) = memory.collectible_reader().collectible_earned()
+        if let Some(game) = memory.game_state_reader().game_state().game()
+            && let Some(collectible) = memory.collectible_reader().collectible_earned(game)
             && settings.get_split_on_collectible(collectible)
         {
             timer::split();
