@@ -24,6 +24,7 @@ impl TimerActive for TimerState {
 /// Performs actions on the timer, such as starting, resetting, and splitting.
 #[derive(Default)]
 pub struct Splitter {
+    waiting_for_control: bool,
     games_entered: HashSet<Game>,
     levels_exited: HashSet<Level>,
     bosses_defeated: HashSet<Boss>,
@@ -39,13 +40,14 @@ impl Splitter {
             return;
         }
 
-        Self::update_load_state(memory);
+        self.update_load_state(memory);
         self.split_on_level_transition(memory, settings);
         self.split_on_boss_defeated(memory, settings);
         Self::split_on_collectible_earned(memory, settings);
     }
 
     fn reset(&mut self) {
+        self.waiting_for_control = false;
         self.games_entered.clear();
         self.levels_exited.clear();
         self.bosses_defeated.clear();
@@ -61,20 +63,32 @@ impl Splitter {
                 }
                 GameState::GameLoading(game) => {
                     if self.games_entered.insert(game) {
+                        self.waiting_for_control = true;
+
                         timer::start();
                         timer::pause_game_time();
                     }
                 }
-                GameState::InControl(_) => timer::resume_game_time(),
+                GameState::InControl(_) => {
+                    if self.waiting_for_control {
+                        self.waiting_for_control = false;
+
+                        timer::resume_game_time();
+                    }
+                }
             }
         }
     }
 
-    fn update_load_state(memory: &Memory) {
+    fn update_load_state(&self, memory: &Memory) {
         if let Some(load_state) = memory.load_state_reader().load_state_changed() {
             match load_state {
                 LoadState::Loading => timer::pause_game_time(),
-                LoadState::Done => timer::resume_game_time(),
+                LoadState::Done => {
+                    if !self.waiting_for_control {
+                        timer::resume_game_time();
+                    }
+                }
             }
         }
     }
