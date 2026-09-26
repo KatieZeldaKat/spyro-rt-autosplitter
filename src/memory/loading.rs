@@ -31,7 +31,7 @@ impl LoadStateReader {
     ) {
         let event = match game_state {
             GameState::TitleScreen => LoadState::Done,
-            GameState::GameLoading | GameState::InControl => {
+            GameState::GameLoading(_) | GameState::InControl(_) => {
                 if Self::read_in_menu(process, address, paths) {
                     LoadState::Done
                 } else if Self::read_loading(process, address, paths) {

@@ -16,8 +16,19 @@ use asr::{Address, Process, watcher::Watcher};
 pub enum GameState {
     #[default]
     TitleScreen,
-    GameLoading,
-    InControl,
+    GameLoading(Game),
+    InControl(Game),
+}
+
+impl GameState {
+    /// Gets the current [`Game`] if one has been selected, [`None`] if on the title screen.
+    #[must_use]
+    pub const fn game(&self) -> Option<Game> {
+        match *self {
+            Self::TitleScreen => None,
+            Self::GameLoading(game) | Self::InControl(game) => Some(game),
+        }
+    }
 }
 
 /// The three games included in the Reignited Trilogy.
@@ -34,7 +45,6 @@ pub enum Game {
 /// Extracts and caches information about the [`GameState`].
 #[derive(Default)]
 pub struct GameStateReader {
-    game: Option<Game>,
     game_state: Watcher<GameState>,
 
     on_title: Watcher<bool>,
@@ -63,35 +73,31 @@ impl GameStateReader {
                 if on_title.changed_to(&false)
                     && let Some(game) = Self::read_game(process, address, paths)
                 {
-                    self.game = Some(game);
                     self.on_title.update_infallible(false);
-                    self.game_state.update_infallible(GameState::GameLoading);
+                    self.game_state
+                        .update_infallible(GameState::GameLoading(game));
                 } else {
                     self.game_state.update_infallible(GameState::TitleScreen);
                 }
             }
-            GameState::GameLoading => {
+            GameState::GameLoading(game) => {
                 if Self::read_in_control(process, address, paths) {
-                    self.game_state.update_infallible(GameState::InControl);
+                    self.game_state
+                        .update_infallible(GameState::InControl(game));
                 } else {
-                    self.game_state.update_infallible(GameState::GameLoading);
+                    self.game_state
+                        .update_infallible(GameState::GameLoading(game));
                 }
             }
-            GameState::InControl => {
+            GameState::InControl(game) => {
                 if Self::read_on_title(process, address, paths) {
-                    self.game = None;
                     self.game_state.update_infallible(GameState::TitleScreen);
                 } else {
-                    self.game_state.update_infallible(GameState::InControl);
+                    self.game_state
+                        .update_infallible(GameState::InControl(game));
                 }
             }
         }
-    }
-
-    /// Returns the current [`Game`] if in one, [`None`] if still on the title screen.
-    #[must_use]
-    pub const fn game(&self) -> Option<Game> {
-        self.game
     }
 
     /// Returns the current [`GameState`].

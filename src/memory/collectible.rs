@@ -17,11 +17,9 @@ pub enum Collectible {
     Egg(u8),
 }
 
-/// Extracts and caches information about the games' [`Collectible`]s.
+/// Extracts and caches information about the [`Game`]s' [`Collectible`]s.
 #[derive(Default)]
 pub struct CollectibleReader {
-    game: Option<Game>,
-
     dragon_count: Watcher<u8>,
     egg_count: Watcher<u8>,
 }
@@ -34,21 +32,18 @@ impl CollectibleReader {
         process: &Process,
         address: Address,
         paths: &PointerPaths,
-        game: Option<Game>,
+        game: Game,
     ) {
-        self.game = game;
-        if let Some(game) = game {
-            match game {
-                Game::Spyro1 => {
-                    if let Some(dragon_count) = Self::read_dragon_count(process, address, paths) {
-                        self.dragon_count.update_infallible(dragon_count);
-                    }
+        match game {
+            Game::Spyro1 => {
+                if let Some(dragon_count) = Self::read_dragon_count(process, address, paths) {
+                    self.dragon_count.update_infallible(dragon_count);
                 }
-                Game::Spyro2 => (),
-                Game::Spyro3 => {
-                    if let Some(egg_count) = Self::read_egg_count(process, address, paths) {
-                        self.egg_count.update_infallible(egg_count);
-                    }
+            }
+            Game::Spyro2 => (),
+            Game::Spyro3 => {
+                if let Some(egg_count) = Self::read_egg_count(process, address, paths) {
+                    self.egg_count.update_infallible(egg_count);
                 }
             }
         }
@@ -56,8 +51,8 @@ impl CollectibleReader {
 
     /// Returns a [`Collectible`] if one was just earned, [`None`] otherwise.
     #[must_use]
-    pub fn collectible_earned(&self) -> Option<Collectible> {
-        match self.game? {
+    pub fn collectible_earned(&self, game: Game) -> Option<Collectible> {
+        match game {
             Game::Spyro1 => {
                 let dragons = self.dragon_count.pair?;
                 dragons
